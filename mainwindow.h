@@ -19,6 +19,10 @@
 #include<QCheckBox>
 #include <QMenu>
 #include <QContextMenuEvent>  // Для использования QContextMenuEvent
+#include <QFileDialog>
+#include <QTextStream>
+#include <QFileDialog>
+#include <QTextStream>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -31,7 +35,9 @@ private slots:
     void loadDates();
     void showAddDateDialog();
     void deleteDate();
-    void checkDate();         // Слот для проверки даты (вызывается таймером)
+    void checkDate();
+    void exportToCSV();
+    void importFromCSV();
 
 private:
     void initDatabase();

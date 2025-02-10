@@ -106,12 +106,45 @@ MainWindow::MainWindow(QWidget *parent)
     connect(searchLineEdit, &QLineEdit::textChanged, this, &MainWindow::searchByName);
 
 
+    QPushButton *exportButton = new QPushButton("Экспорт в CSV");
+    connect(exportButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
+    exportButton->setStyleSheet(
+        "QPushButton {"
+        "background-color: #e74c3c;"  // Красный цвет фона
+        "color: white;"                // Белый цвет текста
+        "border-radius: 10px;"         // Закругленные углы
+        "padding: 10px;"               // Внутренний отступ
+        "font-size: 16px;"             // Размер текста
+        "}"
+        "QPushButton:hover {"
+        "background-color: #c0392b;"  // Темный красный при наведении
+        "}"
+        );
+
+    QPushButton *importButton = new QPushButton("Загрузить из CSV");
+    connect(importButton, &QPushButton::clicked, this, &MainWindow::importFromCSV);
+    importButton->setStyleSheet(
+        "QPushButton {"
+        "background-color: #2ecc71;"  // Зеленый цвет фона
+        "color: white;"                // Белый цвет текста
+        "border-radius: 10px;"         // Закругленные углы
+        "padding: 10px;"               // Внутренний отступ
+        "font-size: 16px;"             // Размер текста
+        "}"
+        "QPushButton:hover {"
+        "background-color: #27ae60;"  // Темный зеленый при наведении
+        "}"
+        );
+
+
     QGridLayout *gridLayout = new QGridLayout();
     // Добавляем виджеты в layout
 
     gridLayout->addWidget(addButton,0 ,0);
     gridLayout->addWidget(deleteButton,0,1);
     gridLayout->addWidget(searchLineEdit,1,0,1,2);
+    gridLayout->addWidget(exportButton, 2, 0);
+    gridLayout->addWidget(importButton, 2, 1);
     // layout->addWidget(addButton);
     // layout->addWidget(deleteButton);
     // layout->addWidget(searchLineEdit);
@@ -386,5 +419,91 @@ void MainWindow::searchByName() {
 
 
 
+
+
+void MainWindow::exportToCSV() {
+    QString fileName = QFileDialog::getSaveFileName(this, "Сохранить как CSV", "", "CSV Files (*.csv)");
+
+    if (fileName.isEmpty())
+        return;  // Если файл не выбран, выходим
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Ошибка", "Не удалось открыть файл для записи.");
+        return;
+    }
+
+    QTextStream stream(&file);
+
+    // Запись заголовков
+    QStringList headers;
+    for (int col = 0; col < tableWidget->columnCount(); ++col) {
+        if (!tableWidget->isColumnHidden(col)) {  // Пропускаем скрытые столбцы
+            headers << tableWidget->horizontalHeaderItem(col)->text();
+        }
+    }
+    stream << headers.join(",") << "\n";
+
+    // Запись данных строк
+    for (int row = 0; row < tableWidget->rowCount(); ++row) {
+        QStringList rowData;
+        for (int col = 0; col < tableWidget->columnCount(); ++col) {
+            if (!tableWidget->isColumnHidden(col)) {  // Пропускаем скрытые столбцы
+                QTableWidgetItem *item = tableWidget->item(row, col);
+                rowData << (item ? item->text() : "");  // Если ячейка пуста, записываем пустую строку
+            }
+        }
+        stream << rowData.join(",") << "\n";
+    }
+
+    file.close();
+    QMessageBox::information(this, "Экспорт завершен", "Таблица успешно экспортирована в CSV.");
+}
+
+
+
+void MainWindow::importFromCSV() {
+    // Открываем диалог для выбора файла CSV
+    QString fileName = QFileDialog::getOpenFileName(this, "Открыть CSV файл", "", "CSV Files (*.csv);;All Files (*)");
+
+    if (fileName.isEmpty()) {
+        return; // Если файл не выбран, выходим
+    }
+
+    // Открываем файл для чтения
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, "Ошибка", "Не удалось открыть файл.");
+        return;
+    }
+
+    QTextStream stream(&file);
+    QString line;
+
+    // Чтение данных из файла и добавление в БД
+    while (!stream.atEnd()) {
+
+        line = stream.readLine();
+        QStringList fields = line.split(","); // Разделяем строку на части по запятой (для CSV)
+        if (fields[0] == "Дата" && fields[1] == "Название" && fields[2] == "Описание") continue;
+
+        if (fields.size() >= 3) {
+            // Добавляем данные в базу данных
+            QSqlQuery query;
+            query.prepare("INSERT INTO dates (date, name, description) VALUES (?, ?, ?)");
+            query.addBindValue(fields[0]);  // Дата
+            query.addBindValue(fields[1]);  // Название
+            query.addBindValue(fields[2]);  // Описание
+
+            if (!query.exec()) {
+                QMessageBox::warning(this, "Ошибка", "Не удалось добавить данные в базу.");
+            }
+        }
+
+    }
+
+    file.close();
+    loadDates();  // Перезагружаем данные в таблице
+}
 
 
