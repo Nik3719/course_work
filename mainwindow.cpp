@@ -24,16 +24,63 @@ MainWindow::MainWindow(QWidget *parent)
     tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     tableWidget->setSortingEnabled(true);  // Включаем сортировку по столбцам
+
     connect(tableWidget, &QTableWidget::customContextMenuRequested,
             this, &MainWindow::onTableWidgetCustomContextMenuRequested);
 
+    tableWidget->setStyleSheet(
+        "QTableWidget {"
+        "border: 1px solid #7f8c8d;"             /* Более тёмная рамка */
+        "gridline-color: #95a5a6;"               /* Более чёткий цвет линий сетки */
+        "font-size: 14px;"                       /* Размер текста */
+        "color: #2c3e50;"                        /* Тёмный цвет текста */
+        "background-color: #ffffff;"             /* Белый фон */
+        "alternate-background-color: #eaf2f8;"   /* Светло-голубой фон для чередующихся строк */
+        "selection-background-color: #5dade2;"   /* Голубой цвет для выделения строки */
+        "selection-color: #ffffff;"              /* Белый цвет текста для выделенных строк */
+        "}"
+        "QHeaderView::section {"
+        "background-color: #2c3e50;"             /* Тёмно-серый фон заголовков */
+        "color: #ecf0f1;"                        /* Светлый цвет текста в заголовках */
+        "padding: 8px;"                          /* Внутренний отступ в заголовках */
+        "font-weight: bold;"                     /* Жирный шрифт для заголовков */
+        "border: 1px solid #34495e;"             /* Более тёмная рамка вокруг заголовков */
+        "}"
+        );
 
     // Создаем кнопки без родителя
     addButton = new QPushButton("Добавить дату");
     addButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    addButton->setStyleSheet(
+        "QPushButton {"
+        "background-color: #3498db;"
+        "color: white;"
+        "border-radius: 10px;"  // Закругленные углы
+        "padding: 10px;"        // Внутренний отступ
+        "font-size: 16px;"
+        "}"
+        "QPushButton:hover {"
+        "background-color: #2980b9;"  // Цвет при наведении
+        "}"
+        );
+
 
     deleteButton = new QPushButton("Удалить дату");
     deleteButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    deleteButton->setStyleSheet(
+        "QPushButton {"
+        "background-color: #e74c3c;"  // Красный цвет (Alizarin)
+        "color: white;"
+        "border-radius: 10px;"        // Закругленные углы
+        "padding: 10px;"              // Внутренний отступ
+        "font-size: 16px;"
+        "}"
+        "QPushButton:hover {"
+        "background-color: #c0392b;"  // Темно-красный при наведении
+        "}"
+        );
+
+
 
     // // Подключаем сигналы и слоты
     connect(addButton, &QPushButton::clicked, this, &MainWindow::showAddDateDialog);
@@ -41,15 +88,35 @@ MainWindow::MainWindow(QWidget *parent)
 
     searchLineEdit = new QLineEdit(this);
     searchLineEdit->setPlaceholderText("Введите имя для поиска");
+    searchLineEdit->setStyleSheet(
+        "QLineEdit {"
+        "border: 2px solid #3498db;"      // Синяя рамка
+        "border-radius: 10px;"            // Закругленные углы
+        "padding: 8px;"                   // Внутренний отступ
+        "font-size: 16px;"                // Размер текста
+        "color: #2c3e50;"                 // Цвет текста
+        "background-color: #ecf0f1;"      // Светло-серый фон
+        "}"
+        "QLineEdit:focus {"
+        "border: 2px solid #2980b9;"      // Цвет рамки при фокусе
+        "background-color: #ffffff;"      // Белый фон при фокусе
+        "}"
+        );
+
     connect(searchLineEdit, &QLineEdit::textChanged, this, &MainWindow::searchByName);
 
 
-
+    QGridLayout *gridLayout = new QGridLayout();
     // Добавляем виджеты в layout
 
-    layout->addWidget(addButton);
-    layout->addWidget(deleteButton);
-    layout->addWidget(searchLineEdit);
+    gridLayout->addWidget(addButton,0 ,0);
+    gridLayout->addWidget(deleteButton,0,1);
+    gridLayout->addWidget(searchLineEdit,1,0,1,2);
+    // layout->addWidget(addButton);
+    // layout->addWidget(deleteButton);
+    // layout->addWidget(searchLineEdit);
+
+    layout->addLayout(gridLayout);
 
     layout->addWidget(tableWidget);
 
