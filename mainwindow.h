@@ -37,15 +37,18 @@ private:
     void initDatabase();
     void createContextMenu(int row);
     void onTableWidgetCustomContextMenuRequested(const QPoint &pos);
-    // void searchByName();
+    void searchByName();
 
+
+
+    QLineEdit *searchLineEdit;  // Поле для ввода текста поиска
+    // QPushButton *searchButton;  // Кнопка для запуска поиска
     QSqlDatabase db;
     QTableWidget *tableWidget;
     QPushButton *addButton;
     // QPushButton *dfghj;
     QPushButton *deleteButton;
-    QLineEdit *searchLineEdit;  // Поле для ввода текста поиска
-    QPushButton *searchButton;  // Кнопка для запуска поиска
+
 
     QTimer *dateTimer;            // Таймер для периодической проверки даты
     QSystemTrayIcon *trayIcon;     // Иконка в системном трее для уведомлений

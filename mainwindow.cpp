@@ -10,6 +10,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
 
     this->resize(800, 800);
+    this->setWindowTitle("Приложение для запоминания дат");
 
     // Создаем centralWidget и layout
     QWidget *centralWidget = new QWidget(this);
@@ -38,11 +39,17 @@ MainWindow::MainWindow(QWidget *parent)
     connect(addButton, &QPushButton::clicked, this, &MainWindow::showAddDateDialog);
     connect(deleteButton, &QPushButton::clicked, this, &MainWindow::deleteDate);
 
+    searchLineEdit = new QLineEdit(this);
+    searchLineEdit->setPlaceholderText("Введите имя для поиска");
+    connect(searchLineEdit, &QLineEdit::textChanged, this, &MainWindow::searchByName);
+
+
 
     // Добавляем виджеты в layout
+
     layout->addWidget(addButton);
     layout->addWidget(deleteButton);
-
+    layout->addWidget(searchLineEdit);
 
     layout->addWidget(tableWidget);
 
@@ -279,36 +286,36 @@ void MainWindow::onTableWidgetCustomContextMenuRequested(const QPoint &pos) {
     }
 }
 
-// void MainWindow::searchByName() {
-//     QString searchText = searchLineEdit->text().trimmed();  // Получаем введенный текст
+void MainWindow::searchByName() {
+    QString searchText = searchLineEdit->text().trimmed();  // Получаем введенный текст
 
-//     if (searchText.isEmpty()) {
-//         loadDates();  // Если строка поиска пуста, загружаем все данные
-//         return;
-//     }
+    if (searchText.isEmpty()) {
+        loadDates();  // Если строка поиска пуста, загружаем все данные
+        return;
+    }
 
-//     // Очищаем таблицу перед добавлением отфильтрованных данных
-//     tableWidget->setRowCount(0);
+    // Очищаем таблицу перед добавлением отфильтрованных данных
+    tableWidget->setRowCount(0);
 
-//     // Запрос для поиска по имени
-//     QSqlQuery query;
-//     query.prepare("SELECT id, date, name, description FROM dates WHERE name LIKE :name");
-//     query.bindValue(":name", "%" + searchText + "%");  // Поиск по имени с подстановкой
+    // Запрос для поиска по имени
+    QSqlQuery query;
+    query.prepare("SELECT id, date, name, description FROM dates WHERE name LIKE :name");
+    query.bindValue(":name", "%" + searchText + "%");  // Поиск по имени с подстановкой
 
-//     if (query.exec()) {
-//         int row = 0;
-//         while (query.next()) {
-//             tableWidget->insertRow(row);
-//             tableWidget->setItem(row, 0, new QTableWidgetItem(query.value(0).toString())); // ID
-//             tableWidget->setItem(row, 1, new QTableWidgetItem(query.value(1).toString())); // Дата
-//             tableWidget->setItem(row, 2, new QTableWidgetItem(query.value(2).toString())); // Название
-//             tableWidget->setItem(row, 3, new QTableWidgetItem(query.value(3).toString())); // Описание
-//             row++;
-//         }
-//     } else {
-//         QMessageBox::critical(this, "Ошибка поиска", query.lastError().text());
-//     }
-// }
+    if (query.exec()) {
+        int row = 0;
+        while (query.next()) {
+            tableWidget->insertRow(row);
+            tableWidget->setItem(row, 0, new QTableWidgetItem(query.value(0).toString())); // ID
+            tableWidget->setItem(row, 1, new QTableWidgetItem(query.value(1).toString())); // Дата
+            tableWidget->setItem(row, 2, new QTableWidgetItem(query.value(2).toString())); // Название
+            tableWidget->setItem(row, 3, new QTableWidgetItem(query.value(3).toString())); // Описание
+            row++;
+        }
+    } else {
+        QMessageBox::critical(this, "Ошибка поиска", query.lastError().text());
+    }
+}
 
 
 
