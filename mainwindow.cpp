@@ -272,7 +272,6 @@ void MainWindow::showAddDateDialog() {
 }
 
 
-
 void MainWindow::deleteDate() {
     QList<QTableWidgetItem*> selectedItems = tableWidget->selectedItems();
 
@@ -281,20 +280,35 @@ void MainWindow::deleteDate() {
         return;
     }
 
-    int row = tableWidget->row(selectedItems.first());
-    QString id = tableWidget->item(row, 0)->text();  // Получаем ID скрытого столбца
+    // Используем QSet для хранения уникальных строк
+    QSet<int> rowsToDelete;
 
-    QSqlQuery query;
-    query.prepare("DELETE FROM dates WHERE id = :id");
-    query.bindValue(":id", id);
-
-    if (!query.exec()) {
-        QMessageBox::critical(this, "Ошибка удаления", query.lastError().text());
-    } else {
-        tableWidget->removeRow(row);
-        QMessageBox::information(this, "Удаление даты", "Дата успешно удалена.");
+    // Добавляем уникальные строки в rowsToDelete
+    for (QTableWidgetItem *item : selectedItems) {
+        rowsToDelete.insert(item->row());
     }
+
+    // Удаляем строки начиная с самых больших индексов, чтобы избежать смещения
+    for (int row : rowsToDelete) {
+        QString id = tableWidget->item(row, 0)->text();  // Получаем ID скрытого столбца
+
+        // Удаляем запись из базы данных
+        QSqlQuery query;
+        query.prepare("DELETE FROM dates WHERE id = :id");
+        query.bindValue(":id", id);
+
+        if (!query.exec()) {
+            QMessageBox::critical(this, "Ошибка удаления", query.lastError().text());
+            return;  // Если произошла ошибка, прекращаем выполнение
+        }
+
+        // Удаляем строку из таблицы
+        tableWidget->removeRow(row);
+    }
+
+    QMessageBox::information(this, "Удаление даты", "Выбранные даты успешно удалены.");
 }
+
 
 
 void MainWindow::checkDate() {
