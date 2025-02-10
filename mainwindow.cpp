@@ -165,7 +165,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Настройка системного трей
     trayIcon = new QSystemTrayIcon(this);
-    trayIcon->setIcon(QIcon("/home/nik/Desktop/untitled3/Resource/clock-five.png")); // Путь к иконке
+    // trayIcon->setIcon(QIcon("/home/nik/Desktop/untitled3/Resource/clock-five.png")); // Путь к иконке
+    QIcon trayIconPNG("/home/nik/Desktop/untitled3/Resource/clock-five.png");
+
+    trayIcon->setIcon(trayIconPNG);
     trayIcon->show();
 
     checkDate();
