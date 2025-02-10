@@ -279,13 +279,34 @@ void MainWindow::onTableWidgetCustomContextMenuRequested(const QPoint &pos) {
     }
 }
 
-// void MainWindow::contextMenuEvent(QContextMenuEvent *event) {
-//     // Проверка, что клик был на строках таблицы, а не на заголовке
-//     int row = tableWidget->rowAt(event->pos().y());  // Используем event->pos().y(), а не event->y()
+// void MainWindow::searchByName() {
+//     QString searchText = searchLineEdit->text().trimmed();  // Получаем введенный текст
 
-//     // Если клик был на строке
-//     if (row >= 0) {
-//         createContextMenu(row);  // Вызываем контекстное меню для выбранной строки
+//     if (searchText.isEmpty()) {
+//         loadDates();  // Если строка поиска пуста, загружаем все данные
+//         return;
+//     }
+
+//     // Очищаем таблицу перед добавлением отфильтрованных данных
+//     tableWidget->setRowCount(0);
+
+//     // Запрос для поиска по имени
+//     QSqlQuery query;
+//     query.prepare("SELECT id, date, name, description FROM dates WHERE name LIKE :name");
+//     query.bindValue(":name", "%" + searchText + "%");  // Поиск по имени с подстановкой
+
+//     if (query.exec()) {
+//         int row = 0;
+//         while (query.next()) {
+//             tableWidget->insertRow(row);
+//             tableWidget->setItem(row, 0, new QTableWidgetItem(query.value(0).toString())); // ID
+//             tableWidget->setItem(row, 1, new QTableWidgetItem(query.value(1).toString())); // Дата
+//             tableWidget->setItem(row, 2, new QTableWidgetItem(query.value(2).toString())); // Название
+//             tableWidget->setItem(row, 3, new QTableWidgetItem(query.value(3).toString())); // Описание
+//             row++;
+//         }
+//     } else {
+//         QMessageBox::critical(this, "Ошибка поиска", query.lastError().text());
 //     }
 // }
 
