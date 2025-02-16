@@ -6,8 +6,17 @@
 #include <QDate>
 #include <QSystemTrayIcon>
 
+
+/*
+ * onServerResponse используется при любом ответе
+
+*/
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
+
+    connectToServer();
+
 
     this->resize(800, 800);
     this->setWindowTitle("Приложение для запоминания дат");
@@ -145,9 +154,6 @@ MainWindow::MainWindow(QWidget *parent)
     gridLayout->addWidget(searchLineEdit,1,0,1,2);
     gridLayout->addWidget(exportButton, 2, 0);
     gridLayout->addWidget(importButton, 2, 1);
-    // layout->addWidget(addButton);
-    // layout->addWidget(deleteButton);
-    // layout->addWidget(searchLineEdit);
 
     layout->addLayout(gridLayout);
 
@@ -159,72 +165,39 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(centralWidget);
 
     // Инициализация базы данных и загрузка данных
-    initDatabase();
-    loadDates();
+    // initDatabase();
+
 
 
     // Настройка системного трей
     trayIcon = new QSystemTrayIcon(this);
-    // trayIcon->setIcon(QIcon("/home/nik/Desktop/untitled3/Resource/clock-five.png")); // Путь к иконке
-    QIcon trayIconPNG("/home/nik/Desktop/untitled3/Resource/clock-five.png");
-
+    QString iconPath = QCoreApplication::applicationDirPath() + "/../Resource/clock-five.png";
+    QIcon trayIconPNG(iconPath);
     trayIcon->setIcon(trayIconPNG);
-    trayIcon->show();
 
+
+    loadDates();
+    BDUpdata();
     checkDate();
 
 }
 
 
+
+
 MainWindow::~MainWindow() {
-    db.close();
+    if (socket) {
+        socket->disconnectFromHost();
+        socket->waitForDisconnected(3000);  // Ждем до 3 секунд для корректного отключения
+        delete socket;
+    }
 }
+
 
 void MainWindow::initDatabase() {
-    db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName("dates.db");
 
-    if (!db.open()) {
-        QMessageBox::critical(this, "Ошибка базы данных", db.lastError().text());
-        return;
-    }
-
-    QSqlQuery query;
-    query.exec("CREATE TABLE IF NOT EXISTS dates ("
-               "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-               "date TEXT, "
-               "name TEXT, "
-               "description TEXT, "
-               "is_important INTEGER DEFAULT 0)"); // 0 - не важно, 1 - важно
 }
 
-
-void MainWindow::loadDates() {
-    tableWidget->setRowCount(0);
-
-    // Теперь выбираем id, date, name, description, is_important
-    QSqlQuery query("SELECT id, date, name, description, is_important FROM dates");
-
-    int row = 0;
-    while (query.next()) {
-        tableWidget->insertRow(row);
-
-        // Устанавливаем значения в правильные столбцы
-        tableWidget->setItem(row, 0, new QTableWidgetItem(query.value(0).toString())); // ID (скрытый)
-        tableWidget->setItem(row, 1, new QTableWidgetItem(query.value(1).toString())); // Дата
-        tableWidget->setItem(row, 2, new QTableWidgetItem(query.value(2).toString())); // Название
-        tableWidget->setItem(row, 3, new QTableWidgetItem(query.value(3).toString())); // Описание
-
-        // Если дата важная, выделяем её цветом (опционально)
-        if (query.value(4).toInt() == 1) {
-            for (int col = 0; col < 4; ++col) {
-                tableWidget->item(row, col)->setBackground(QColor(176, 196, 222));
-            }
-        }
-
-        row++;
-    }
-}
 
 
 void MainWindow::showAddDateDialog() {
@@ -250,29 +223,49 @@ void MainWindow::showAddDateDialog() {
         QString date = dateEdit->date().toString("dd.MM.yyyy");
         QString name = nameEdit->text();
         QString description = descriptionEdit->text();
-        bool isImportant = importantCheckBox->isChecked(); // Получаем значение флажка
+        bool isImportant = importantCheckBox->isChecked();
 
-        if (!name.isEmpty() && !description.isEmpty()) {
-            QSqlQuery query;
-            query.prepare("INSERT INTO dates (date, name, description, is_important) VALUES (:date, :name, :description, :is_important)");
-            query.bindValue(":date", date);
-            query.bindValue(":name", name);
-            query.bindValue(":description", description);
-            query.bindValue(":is_important", isImportant ? 1 : 0); // Вставляем важность
-
-            if (!query.exec()) {
-                QMessageBox::critical(this, "Ошибка добавления", query.lastError().text());
-            } else {
-                loadDates();
-                dialog.accept();
-            }
-        } else {
+        if (name.isEmpty() || description.isEmpty()) {
             QMessageBox::warning(&dialog, "Некорректные данные", "Пожалуйста, заполните все поля.");
+            return;
+        }
+
+        // Формируем строку запроса
+        QString request = QString("ADD_DATE|%1|%2|%3|%4")
+                              .arg(date)
+                              .arg(name)
+                              .arg(description)
+                              .arg(isImportant ? "1" : "0");
+
+        socket->write(request.toUtf8());
+        // Проверяем, если сокет подключен
+        if (socket && socket->state() == QTcpSocket::ConnectedState) {
+            if (!socket->waitForBytesWritten()) {
+                QMessageBox::critical(&dialog, "Ошибка", "Не удалось отправить данные на сервер.");
+                return;
+            }
+            if (socket->waitForReadyRead())
+            {
+                if (response == "OK")
+                {
+                    response.clear();
+                    loadDates();
+                    BDUpdata();
+                    dialog.accept();
+                } else {
+                    qDebug() << "showAddDateDialog Errror";
+                }
+
+            }
+
+        } else {
+            QMessageBox::critical(&dialog, "Ошибка", "Не подключено к серверу.");
         }
     });
-
     dialog.exec();
 }
+
+
 
 
 void MainWindow::deleteDate() {
@@ -283,53 +276,76 @@ void MainWindow::deleteDate() {
         return;
     }
 
-    // Используем QSet для хранения уникальных строк
-    QSet<int> rowsToDelete;
+    QSet<QString> idsToDelete;
+    QMap<QString, int> idToRowMap;  // Карта ID -> строка
 
-    // Добавляем уникальные строки в rowsToDelete
+    // Заполняем ID и соответствующие строки
     for (QTableWidgetItem *item : selectedItems) {
-        rowsToDelete.insert(item->row());
+        int row = item->row();
+        QString id = tableWidget->item(row, 0)->text();
+        idsToDelete.insert(id);
+        idToRowMap[id] = row;  // Связываем ID с номером строки
     }
 
-    // Удаляем строки начиная с самых больших индексов, чтобы избежать смещения
-    for (int row : rowsToDelete) {
-        QString id = tableWidget->item(row, 0)->text();  // Получаем ID скрытого столбца
+    // Формируем запрос для сервера
+    QString request = "DELETE_DATE";
+    for (const QString &id : idsToDelete) {
+        request += "|" + id;
+    }
 
-        // Удаляем запись из базы данных
-        QSqlQuery query;
-        query.prepare("DELETE FROM dates WHERE id = :id");
-        query.bindValue(":id", id);
+    socket->write(request.toUtf8());
+    if (socket->waitForReadyRead()) {
+        qDebug() << "Ответ от сервера:" << response;
+        response.clear();
 
-        if (!query.exec()) {
-            QMessageBox::critical(this, "Ошибка удаления", query.lastError().text());
-            return;  // Если произошла ошибка, прекращаем выполнение
+        // Удаляем строки, начиная с самых больших индексов (чтобы избежать смещения)
+        QList<int> rows;
+        for (const QString &id : idsToDelete) {
+            rows.append(idToRowMap[id]);
+        }
+        std::sort(rows.rbegin(), rows.rend());  // Упорядочиваем от большего к меньшему
+
+        for (int row : rows) {
+            tableWidget->removeRow(row);
         }
 
-        // Удаляем строку из таблицы
-        tableWidget->removeRow(row);
-    }
+        QMessageBox::information(this, "Удаление даты", "Выбранные даты успешно удалены.");
 
-    QMessageBox::information(this, "Удаление даты", "Выбранные даты успешно удалены.");
+    } else {
+        QMessageBox::critical(this, "Ошибка", "Нет ответа от сервера.");
+    }
 }
+
+
 
 
 
 void MainWindow::checkDate() {
-    QDate currentDate = QDate::currentDate();
 
-    // Проходим по всем датам в базе данных
-    QSqlQuery query("SELECT date, name, is_important FROM dates WHERE is_important = 1");
-    while (query.next()) {
-        QDate savedDate = QDate::fromString(query.value(0).toString(), "dd.MM.yyyy");
+    socket->write("GET_DATES");
+    socket->waitForReadyRead();
+    QStringList rows = QString(response).split("\n", Qt::SkipEmptyParts);
+    response.clear();
+    int row = 0;
+    QDate currentDate = QDate::currentDate();
+    for (const QString &line : rows) {
+        QStringList columns = line.split(",");
+        QDate savedDate = QDate::fromString(columns[1].trimmed(), "yyyy-MM-dd");
+        qDebug()<<savedDate << currentDate;
 
         // Если дата совпадает, показываем уведомление
         if (savedDate.month() == currentDate.month() && savedDate.day() == currentDate.day()) {
-            QString message = QString("Сегодня важная дата: %1").arg(query.value(1).toString());
-            trayIcon->showMessage("Напоминание", message, QSystemTrayIcon::Information, 5000); // Уведомление на 5 секунд
-        }
-    }
-}
 
+            QString message = QString("Сегодня важная дата: %1").arg(columns[2].trimmed());
+            trayIcon->showMessage("Напоминание", message, QSystemTrayIcon::Information, 1000); // Уведомление на 5 секунд
+
+            QString command = QString("notify-send 'Напоминание' '%1'").arg(message);
+            system(command.toUtf8().constData());
+        }
+        row++;
+    }
+
+}
 
 
 
@@ -350,11 +366,11 @@ void MainWindow::createContextMenu(int row) {
         dialog.setWindowTitle("Редактировать дату");
 
         QFormLayout form(&dialog);
-        QDateEdit *dateEdit = new QDateEdit(QDate::fromString(date, "dd.MM.yyyy"), &dialog);
+        QDateEdit *dateEdit = new QDateEdit(QDate::fromString(date, "yyyy-MM-dd"), &dialog);
         dateEdit->setCalendarPopup(true);
         QLineEdit *nameEdit = new QLineEdit(name, &dialog);
         QLineEdit *descriptionEdit = new QLineEdit(description, &dialog);
-        QCheckBox *importantCheckBox = new QCheckBox("Отметить как важную", &dialog); // Флажок для важности
+        QCheckBox *importantCheckBox = new QCheckBox("Отметить как важную", &dialog);
 
         form.addRow("Дата:", dateEdit);
         form.addRow("Название:", nameEdit);
@@ -365,26 +381,36 @@ void MainWindow::createContextMenu(int row) {
         form.addWidget(submitButton);
 
         connect(submitButton, &QPushButton::clicked, [&]() {
-            QString newDate = dateEdit->date().toString("dd.MM.yyyy");
+            QString newDate = dateEdit->date().toString("yyyy-MM-dd");
             QString newName = nameEdit->text();
             QString newDescription = descriptionEdit->text();
             bool isImportant = importantCheckBox->isChecked();
 
             if (!newName.isEmpty() && !newDescription.isEmpty()) {
-                QSqlQuery query;
-                query.prepare("UPDATE dates SET date = :date, name = :name, description = :description, is_important = :is_important WHERE id = :id");
-                query.bindValue(":date", newDate);
-                query.bindValue(":name", newName);
-                query.bindValue(":description", newDescription);
-                query.bindValue(":is_important", isImportant ? 1 : 0);
-                query.bindValue(":id", id);
+                if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+                    QString request = QString("EDIT_DATE|%1|%2|%3|%4|%5")
+                                          .arg(id)
+                                          .arg(newDate)
+                                          .arg(newName)
+                                          .arg(newDescription)
+                                          .arg(isImportant ? "1" : "0");
 
-                if (!query.exec()) {
-                    QMessageBox::critical(this, "Ошибка редактирования", query.lastError().text());
+                    socket->write(request.toUtf8());
+                    socket->flush();  // Гарантируем отправку данных
+                    qDebug() << "Отправлен запрос на редактирование: " << request;
+                    if (socket->waitForReadyRead())
+                    {
+                        if (response=="EDIT_SUCCESS")
+                        {
+                            response.clear();
+                            loadDates();
+                            BDUpdata();
+                        }
+                    }
                 } else {
-                    loadDates();
-                    dialog.accept();
+                    QMessageBox::critical(this, "Ошибка", "Нет подключения к серверу!");
                 }
+                dialog.accept();
             } else {
                 QMessageBox::warning(&dialog, "Некорректные данные", "Пожалуйста, заполните все поля.");
             }
@@ -396,6 +422,7 @@ void MainWindow::createContextMenu(int row) {
     contextMenu.exec(QCursor::pos());
 }
 
+
 void MainWindow::onTableWidgetCustomContextMenuRequested(const QPoint &pos) {
     QModelIndex index = tableWidget->indexAt(pos);
     if (index.isValid()) {
@@ -403,34 +430,21 @@ void MainWindow::onTableWidgetCustomContextMenuRequested(const QPoint &pos) {
     }
 }
 
+
 void MainWindow::searchByName() {
-    QString searchText = searchLineEdit->text().trimmed();  // Получаем введенный текст
+    QString searchText = searchLineEdit->text().trimmed();
 
     if (searchText.isEmpty()) {
-        loadDates();  // Если строка поиска пуста, загружаем все данные
+        for (int row = 0; row < tableWidget->rowCount(); ++row) {
+            tableWidget->setRowHidden(row, false);  // Показываем все строки
+        }
         return;
     }
 
-    // Очищаем таблицу перед добавлением отфильтрованных данных
-    tableWidget->setRowCount(0);
-
-    // Запрос для поиска по имени
-    QSqlQuery query;
-    query.prepare("SELECT id, date, name, description FROM dates WHERE name LIKE :name");
-    query.bindValue(":name", "%" + searchText + "%");  // Поиск по имени с подстановкой
-
-    if (query.exec()) {
-        int row = 0;
-        while (query.next()) {
-            tableWidget->insertRow(row);
-            tableWidget->setItem(row, 0, new QTableWidgetItem(query.value(0).toString())); // ID
-            tableWidget->setItem(row, 1, new QTableWidgetItem(query.value(1).toString())); // Дата
-            tableWidget->setItem(row, 2, new QTableWidgetItem(query.value(2).toString())); // Название
-            tableWidget->setItem(row, 3, new QTableWidgetItem(query.value(3).toString())); // Описание
-            row++;
-        }
-    } else {
-        QMessageBox::critical(this, "Ошибка поиска", query.lastError().text());
+    for (int row = 0; row < tableWidget->rowCount(); ++row) {
+        QString name = tableWidget->item(row, 2)->text();  // Колонка с именем
+        bool match = name.contains(searchText, Qt::CaseInsensitive);
+        tableWidget->setRowHidden(row, !match);  // Скрываем строки, которые не совпадают
     }
 }
 
@@ -439,6 +453,8 @@ void MainWindow::searchByName() {
 
 
 void MainWindow::exportToCSV() {
+    loadDates();
+    BDUpdata();
     QString fileName = QFileDialog::getSaveFileName(this, "Сохранить как CSV", "", "CSV Files (*.csv)");
 
     if (fileName.isEmpty())
@@ -524,3 +540,82 @@ void MainWindow::importFromCSV() {
 }
 
 
+void MainWindow::connectToServer() {
+    socket = new QTcpSocket(this);
+    connect(socket, &QTcpSocket::connected, this, []() {
+        qDebug() << "Подключено к серверу!";
+    });
+
+    connect(socket, &QTcpSocket::readyRead, this, &MainWindow::onServerResponse);
+    connect(socket, &QTcpSocket::errorOccurred, this, [](QAbstractSocket::SocketError error) {
+        qDebug() << "Ошибка подключения:" << error;
+    });
+
+    socket->connectToHost("127.0.0.1", 1244); // IP сервера и порт
+}
+
+
+
+void MainWindow::loadDates() {
+    // Если сокет не создан или не подключен — ждем подключения
+    socket->waitForConnected();
+    if (!socket || socket->state() != QAbstractSocket::ConnectedState) {
+        // Подключаем слот к сигналу connected (с флагом UniqueConnection, чтобы не было дублирования)
+        qDebug() << "Сокет еще не подключен, ждем подключения...";
+        return;
+    }
+
+
+    socket->write("GET_DATES");
+    qDebug() << "Функция loadDates выполнена";
+}
+
+
+// Теперь обработка ответа сервера происходит в onServerResponse
+void MainWindow::onServerResponse() {
+
+    response = socket->readAll();
+    qDebug() << "this func onServerResponse " << response;
+
+    if (response == "DB_ERROR") {
+        qDebug() << "Ошибка базы данных на сервере!";
+        return;
+    }
+}
+
+
+void MainWindow::BDUpdata()
+{
+    if (!socket->waitForReadyRead(3000)) {
+        qDebug() << "Нет ответа от сервера в течение 3 секунд.";
+        return;
+    }
+    QStringList rows = QString(response).split("\n", Qt::SkipEmptyParts);
+    response.clear();
+    int row = 0;
+    tableWidget->setRowCount(0); // Очищаем таблицу перед загрузкой данных
+
+    for (const QString &line : rows) {
+        QStringList columns = line.split(",");
+        if (columns.size() < 5) continue; // Пропускаем некорректные строки
+
+        tableWidget->insertRow(row);
+        tableWidget->setItem(row, 0, new QTableWidgetItem(columns[0])); // ID
+        tableWidget->setItem(row, 1, new QTableWidgetItem(columns[1])); // Дата
+        tableWidget->setItem(row, 2, new QTableWidgetItem(columns[2])); // Название
+        tableWidget->setItem(row, 3, new QTableWidgetItem(columns[3])); // Описание
+        qDebug()<< columns[4];
+
+        // Выделяем важные даты цветом
+        if (columns[4] == "true") {
+            qDebug()<< columns[2];
+            for (int col = 0; col < 4; ++col) {
+                tableWidget->item(row, col)->setBackground(QColor(176, 196, 222));
+            }
+        }
+
+
+        row++;
+    }
+     qDebug() << "this func BDUpdata";
+}

@@ -23,6 +23,9 @@
 #include <QTextStream>
 #include <QFileDialog>
 #include <QTextStream>
+#include <QTcpSocket>
+#include<QThread>
+#include<QCoreApplication>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -39,25 +42,31 @@ private slots:
     void exportToCSV();
     void importFromCSV();
 
+
 private:
     void initDatabase();
     void createContextMenu(int row);
     void onTableWidgetCustomContextMenuRequested(const QPoint &pos);
     void searchByName();
+    void connectToServer();
+    void onServerResponse();
+    void sendRequest(const QString &request);
+    void BDUpdata();
+
 
 
 
     QLineEdit *searchLineEdit;  // Поле для ввода текста поиска
-    // QPushButton *searchButton;  // Кнопка для запуска поиска
     QSqlDatabase db;
     QTableWidget *tableWidget;
     QPushButton *addButton;
-    // QPushButton *dfghj;
     QPushButton *deleteButton;
 
-
-    QTimer *dateTimer;            // Таймер для периодической проверки даты
     QSystemTrayIcon *trayIcon;     // Иконка в системном трее для уведомлений
+
+    QTcpSocket *socket;
+    QByteArray response;
 };
+
 
 #endif // MAINWINDOW_H
