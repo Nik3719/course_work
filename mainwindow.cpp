@@ -7,10 +7,7 @@
 #include <QSystemTrayIcon>
 
 
-/*
- * onServerResponse используется при любом ответе
 
-*/
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent) {
@@ -277,12 +274,22 @@ void MainWindow::showAddDateDialog() {
                     response.clear();
                     loadDates();
                     BDUpdata();
-                    dialog.accept();
-                } else {
-                    qDebug() << "showAddDateDialog Errror";
                 }
 
+                if (response == "DB_ERROR") {
+                    QMessageBox::critical(&dialog, "Ошибка", "Не добавлено на сервер.\n Возможно имя не уникально");
+                    response.clear();
+                }
+                else
+                {
+                    qDebug()<< "showAddDateDialog Error";
+                    response.clear();
+                }
+                dialog.accept();
+
             }
+
+
 
         } else {
             QMessageBox::critical(&dialog, "Ошибка", "Не подключено к серверу.");
@@ -430,6 +437,15 @@ void MainWindow::createContextMenu(int row) {
                             loadDates();
                             BDUpdata();
                         }
+                        else if (response.startsWith("EDIT_ERROR")) {
+                            QMessageBox::critical(&dialog, "Ошибка", "Не добавлено на сервер.\n Возможно имя не уникально");
+                            response.clear();
+                        }
+                        else
+                        {
+                            qDebug()<< "showAddDateDialog Error";
+                            response.clear();
+                        }
                     }
                 } else {
                     QMessageBox::critical(this, "Ошибка", "Нет подключения к серверу!");
@@ -559,16 +575,21 @@ void MainWindow::importFromCSV() {
         socket->waitForReadyRead();
 
         if (response.startsWith("IMPORT_SUCCESS")) {
-            QMessageBox::information(this, "Импорт завершен", "Таблица успешно импортирована в базу данных.");
+            QStringList parts = QString::fromUtf8(response).split('|');
+
+            QString message = "Таблица успешно импортирована в базу данных.";
+            if (parts.size() > 1) {
+                message = QString("Таблица успешно импортирована в базу данных.\nДобавлено записей: %1").arg(parts[1].trimmed());
+            }
+            QMessageBox::information(this, "Импорт завершен", message);
 
             response.clear();
             loadDates();  // Запрашиваем свежие данные
             BDUpdata();
-
         } else if (response.startsWith("IMPORT_ERROR")) {
-            QMessageBox::warning(this, "Ошибка импорта", "Не удалост импортировать в таблицу");
+            QMessageBox::warning(this, "Ошибка импорта", "Не удалось импортировать в таблицу");
         }
-        response.clear();
+
         qDebug() << "Отправлен запрос на импорт CSV";
     } else {
         QMessageBox::warning(this, "Ошибка", "Нет подключения к серверу.");
