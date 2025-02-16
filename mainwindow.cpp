@@ -560,8 +560,11 @@ void MainWindow::importFromCSV() {
 
         if (response.startsWith("IMPORT_SUCCESS")) {
             QMessageBox::information(this, "Импорт завершен", "Таблица успешно импортирована в базу данных.");
+
+            response.clear();
             loadDates();  // Запрашиваем свежие данные
             BDUpdata();
+
         } else if (response.startsWith("IMPORT_ERROR")) {
             QMessageBox::warning(this, "Ошибка импорта", "Не удалост импортировать в таблицу");
         }
