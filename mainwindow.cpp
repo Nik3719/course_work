@@ -25,14 +25,165 @@ MainWindow::MainWindow(QWidget *parent)
     QWidget *centralWidget = new QWidget(this);
     QVBoxLayout *layout = new QVBoxLayout();  // Убираем родителя
 
-    // Создаем tableWidget без родителя
+    CreateTable();
+    CreateAddButton();
+    CreateDelButton();
+    CreateSearchLine();
+
+    CreateExportButton();
+
+
+    CreateImportButton();
+
+
+    gridLayout = new QGridLayout();
+    // Добавляем виджеты в layout
+
+    gridLayout->addWidget(addButton,0 ,0);
+    gridLayout->addWidget(deleteButton,0,1);
+    gridLayout->addWidget(searchLineEdit,1,0,1,2);
+    gridLayout->addWidget(exportButton, 2, 0);
+    gridLayout->addWidget(importButton, 2, 1);
+
+    layout->addLayout(gridLayout);
+
+    layout->addWidget(tableWidget);
+
+
+    // Устанавливаем layout для centralWidget
+    centralWidget->setLayout(layout);
+    setCentralWidget(centralWidget);
+
+    // Настройка системного трей
+    trayIcon = new QSystemTrayIcon(this);
+    QString iconPath = QCoreApplication::applicationDirPath() + "/../Resource/clock-five.png";
+    QIcon trayIconPNG(iconPath);
+    trayIcon->setIcon(trayIconPNG);
+    trayIcon->show();
+
+    QIcon icon("Resource/clock-five.png"); // Убедитесь, что путь к файлу правильный
+    setWindowIcon(icon);
+
+
+    loadDates();
+    BDUpdata();
+    checkDate();
+
+}
+
+void MainWindow::CreateExportButton()
+{
+    exportButton = new QPushButton("Экспорт в CSV");
+    connect(exportButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
+    exportButton->setStyleSheet(
+        "QPushButton {"
+        "background-color: #e74c3c;"  // Красный цвет фона
+        "color: white;"                // Белый цвет текста
+        "border-radius: 10px;"         // Закругленные углы
+        "padding: 10px;"               // Внутренний отступ
+        "font-size: 16px;"             // Размер текста
+        "}"
+        "QPushButton:hover {"
+        "background-color: #c0392b;"  // Темный красный при наведении
+        "}"
+        );
+
+}
+
+
+void MainWindow::CreateImportButton()
+{
+    importButton = new QPushButton("Загрузить из CSV");
+    connect(importButton, &QPushButton::clicked, this, &MainWindow::importFromCSV);
+    importButton->setStyleSheet(
+        "QPushButton {"
+        "background-color: #2ecc71;"  // Зеленый цвет фона
+        "color: white;"                // Белый цвет текста
+        "border-radius: 10px;"         // Закругленные углы
+        "padding: 10px;"               // Внутренний отступ
+        "font-size: 16px;"             // Размер текста
+        "}"
+        "QPushButton:hover {"
+        "background-color: #27ae60;"  // Темный зеленый при наведении
+        "}"
+        );
+}
+
+void MainWindow::CreateSearchLine()
+{
+    searchLineEdit = new QLineEdit(this);
+    searchLineEdit->setPlaceholderText("Введите имя для поиска");
+    searchLineEdit->setStyleSheet(
+        "QLineEdit {"
+        "border: 2px solid #3498db;"      // Синяя рамка
+        "border-radius: 10px;"            // Закругленные углы
+        "padding: 8px;"                   // Внутренний отступ
+        "font-size: 16px;"                // Размер текста
+        "color: #2c3e50;"                 // Цвет текста
+        "background-color: #ecf0f1;"      // Светло-серый фон
+        "}"
+        "QLineEdit:focus {"
+        "border: 2px solid #2980b9;"      // Цвет рамки при фокусе
+        "background-color: #ffffff;"      // Белый фон при фокусе
+        "}"
+        );
+
+    connect(searchLineEdit, &QLineEdit::textChanged, this, &MainWindow::searchByName);
+}
+
+void MainWindow::CreateDelButton()
+{
+    deleteButton = new QPushButton("Удалить дату");
+    deleteButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    deleteButton->setStyleSheet(
+        "QPushButton {"
+        "background-color: #e74c3c;"  // Красный цвет (Alizarin)
+        "color: white;"
+        "border-radius: 10px;"        // Закругленные углы
+        "padding: 10px;"              // Внутренний отступ
+        "font-size: 16px;"
+        "}"
+        "QPushButton:hover {"
+        "background-color: #c0392b;"  // Темно-красный при наведении
+        "}"
+        );
+
+
+
+
+    connect(deleteButton, &QPushButton::clicked, this, &MainWindow::deleteDate);
+}
+
+
+void MainWindow::CreateAddButton()
+{
+    // Создаем кнопки без родителя
+    addButton = new QPushButton("Добавить дату");
+    addButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    addButton->setStyleSheet(
+        "QPushButton {"
+        "background-color: #3498db;"
+        "color: white;"
+        "border-radius: 10px;"  // Закругленные углы
+        "padding: 10px;"        // Внутренний отступ
+        "font-size: 16px;"
+        "}"
+        "QPushButton:hover {"
+        "background-color: #2980b9;"  // Цвет при наведении
+        "}"
+        );
+    connect(addButton, &QPushButton::clicked, this, &MainWindow::showAddDateDialog);
+}
+
+void MainWindow::CreateTable()
+{
     tableWidget = new QTableWidget();
     tableWidget->setColumnCount(4);
     tableWidget->setHorizontalHeaderLabels({"ID", "Дата", "Название", "Описание"});
     tableWidget->setColumnHidden(0, true);
     tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-    tableWidget->setSortingEnabled(true);  // Включаем сортировку по столбцам
+    //tableWidget->setSortingEnabled(true);  // Включаем сортировку по столбцам
 
     connect(tableWidget, &QTableWidget::customContextMenuRequested,
             this, &MainWindow::onTableWidgetCustomContextMenuRequested);
@@ -57,132 +208,7 @@ MainWindow::MainWindow(QWidget *parent)
         "}"
         );
 
-    // Создаем кнопки без родителя
-    addButton = new QPushButton("Добавить дату");
-    addButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    addButton->setStyleSheet(
-        "QPushButton {"
-        "background-color: #3498db;"
-        "color: white;"
-        "border-radius: 10px;"  // Закругленные углы
-        "padding: 10px;"        // Внутренний отступ
-        "font-size: 16px;"
-        "}"
-        "QPushButton:hover {"
-        "background-color: #2980b9;"  // Цвет при наведении
-        "}"
-        );
-
-
-    deleteButton = new QPushButton("Удалить дату");
-    deleteButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-    deleteButton->setStyleSheet(
-        "QPushButton {"
-        "background-color: #e74c3c;"  // Красный цвет (Alizarin)
-        "color: white;"
-        "border-radius: 10px;"        // Закругленные углы
-        "padding: 10px;"              // Внутренний отступ
-        "font-size: 16px;"
-        "}"
-        "QPushButton:hover {"
-        "background-color: #c0392b;"  // Темно-красный при наведении
-        "}"
-        );
-
-
-
-    // // Подключаем сигналы и слоты
-    connect(addButton, &QPushButton::clicked, this, &MainWindow::showAddDateDialog);
-    connect(deleteButton, &QPushButton::clicked, this, &MainWindow::deleteDate);
-
-    searchLineEdit = new QLineEdit(this);
-    searchLineEdit->setPlaceholderText("Введите имя для поиска");
-    searchLineEdit->setStyleSheet(
-        "QLineEdit {"
-        "border: 2px solid #3498db;"      // Синяя рамка
-        "border-radius: 10px;"            // Закругленные углы
-        "padding: 8px;"                   // Внутренний отступ
-        "font-size: 16px;"                // Размер текста
-        "color: #2c3e50;"                 // Цвет текста
-        "background-color: #ecf0f1;"      // Светло-серый фон
-        "}"
-        "QLineEdit:focus {"
-        "border: 2px solid #2980b9;"      // Цвет рамки при фокусе
-        "background-color: #ffffff;"      // Белый фон при фокусе
-        "}"
-        );
-
-    connect(searchLineEdit, &QLineEdit::textChanged, this, &MainWindow::searchByName);
-
-
-    QPushButton *exportButton = new QPushButton("Экспорт в CSV");
-    connect(exportButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
-    exportButton->setStyleSheet(
-        "QPushButton {"
-        "background-color: #e74c3c;"  // Красный цвет фона
-        "color: white;"                // Белый цвет текста
-        "border-radius: 10px;"         // Закругленные углы
-        "padding: 10px;"               // Внутренний отступ
-        "font-size: 16px;"             // Размер текста
-        "}"
-        "QPushButton:hover {"
-        "background-color: #c0392b;"  // Темный красный при наведении
-        "}"
-        );
-
-    QPushButton *importButton = new QPushButton("Загрузить из CSV");
-    connect(importButton, &QPushButton::clicked, this, &MainWindow::importFromCSV);
-    importButton->setStyleSheet(
-        "QPushButton {"
-        "background-color: #2ecc71;"  // Зеленый цвет фона
-        "color: white;"                // Белый цвет текста
-        "border-radius: 10px;"         // Закругленные углы
-        "padding: 10px;"               // Внутренний отступ
-        "font-size: 16px;"             // Размер текста
-        "}"
-        "QPushButton:hover {"
-        "background-color: #27ae60;"  // Темный зеленый при наведении
-        "}"
-        );
-
-
-    QGridLayout *gridLayout = new QGridLayout();
-    // Добавляем виджеты в layout
-
-    gridLayout->addWidget(addButton,0 ,0);
-    gridLayout->addWidget(deleteButton,0,1);
-    gridLayout->addWidget(searchLineEdit,1,0,1,2);
-    gridLayout->addWidget(exportButton, 2, 0);
-    gridLayout->addWidget(importButton, 2, 1);
-
-    layout->addLayout(gridLayout);
-
-    layout->addWidget(tableWidget);
-
-
-    // Устанавливаем layout для centralWidget
-    centralWidget->setLayout(layout);
-    setCentralWidget(centralWidget);
-
-    // Инициализация базы данных и загрузка данных
-    // initDatabase();
-
-
-
-    // Настройка системного трей
-    trayIcon = new QSystemTrayIcon(this);
-    QString iconPath = QCoreApplication::applicationDirPath() + "/../Resource/clock-five.png";
-    QIcon trayIconPNG(iconPath);
-    trayIcon->setIcon(trayIconPNG);
-
-
-    loadDates();
-    BDUpdata();
-    checkDate();
-
 }
-
-
 
 
 MainWindow::~MainWindow() {
@@ -331,8 +357,6 @@ void MainWindow::checkDate() {
     for (const QString &line : rows) {
         QStringList columns = line.split(",");
         QDate savedDate = QDate::fromString(columns[1].trimmed(), "yyyy-MM-dd");
-        qDebug()<<savedDate << currentDate;
-
         // Если дата совпадает, показываем уведомление
         if (savedDate.month() == currentDate.month() && savedDate.day() == currentDate.day()) {
 
@@ -496,63 +520,83 @@ void MainWindow::exportToCSV() {
 
 
 void MainWindow::importFromCSV() {
-    // Открываем диалог для выбора файла CSV
     QString fileName = QFileDialog::getOpenFileName(this, "Открыть CSV файл", "", "CSV Files (*.csv);;All Files (*)");
 
     if (fileName.isEmpty()) {
         return; // Если файл не выбран, выходим
     }
 
-    // Открываем файл для чтения
     QFile file(fileName);
-    if (!file.open(QIODevice::ReadOnly)) {
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox::warning(this, "Ошибка", "Не удалось открыть файл.");
         return;
     }
 
     QTextStream stream(&file);
-    QString line;
+    QStringList csvData;
 
-    // Чтение данных из файла и добавление в БД
     while (!stream.atEnd()) {
-
-        line = stream.readLine();
-        QStringList fields = line.split(","); // Разделяем строку на части по запятой (для CSV)
-        if (fields[0] == "Дата" && fields[1] == "Название" && fields[2] == "Описание") continue;
-
-        if (fields.size() >= 3) {
-            // Добавляем данные в базу данных
-            QSqlQuery query;
-            query.prepare("INSERT INTO dates (date, name, description) VALUES (?, ?, ?)");
-            query.addBindValue(fields[0]);  // Дата
-            query.addBindValue(fields[1]);  // Название
-            query.addBindValue(fields[2]);  // Описание
-
-            if (!query.exec()) {
-                QMessageBox::warning(this, "Ошибка", "Не удалось добавить данные в базу.");
-            }
-        }
-
+        QString line = stream.readLine();
+        QStringList fields = line.split(",");
+        if (fields.size() < 3) continue;  // Пропускаем некорректные строки
+        if (fields[0] == "Дата" && fields[1] == "Название" && fields[2] == "Описание") continue;  // Пропускаем заголовок
+        csvData.append(line);
     }
 
     file.close();
-    loadDates();  // Перезагружаем данные в таблице
+
+    if (csvData.isEmpty()) {
+        QMessageBox::warning(this, "Ошибка", "Файл не содержит данных для импорта.");
+        return;
+    }
+
+    // Отправляем данные на сервер
+    if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+        QString request = "IMPORT_CSV|" + csvData.join("\n");
+        socket->write(request.toUtf8());
+        socket->flush();
+
+        socket->waitForReadyRead();
+
+        if (response.startsWith("IMPORT_SUCCESS")) {
+            QMessageBox::information(this, "Импорт завершен", "Таблица успешно импортирована в базу данных.");
+            loadDates();  // Запрашиваем свежие данные
+            BDUpdata();
+        } else if (response.startsWith("IMPORT_ERROR")) {
+            QMessageBox::warning(this, "Ошибка импорта", "Не удалост импортировать в таблицу");
+        }
+        response.clear();
+        qDebug() << "Отправлен запрос на импорт CSV";
+    } else {
+        QMessageBox::warning(this, "Ошибка", "Нет подключения к серверу.");
+    }
+
 }
+
 
 
 void MainWindow::connectToServer() {
     socket = new QTcpSocket(this);
-    connect(socket, &QTcpSocket::connected, this, []() {
-        qDebug() << "Подключено к серверу!";
-    });
+
+    qDebug() << "Попытка подключения к серверу...";
+    socket->connectToHost("127.0.0.1", 1244); // IP сервера и порт
+
+    // Ожидание подключения (тайм-аут 5 секунд)
+    if (!socket->waitForConnected(5000)) {
+        qDebug() << "Ошибка: Не удалось подключиться к серверу!";
+        QMessageBox::critical(this, "Ошибка", "Не удалось подключиться к серверу. Приложение будет закрыто.");
+        QCoreApplication::quit(); // Закрытие приложения, если соединение не установлено
+        exit(1);
+    }
+
+    qDebug() << "Успешно подключено к серверу!";
 
     connect(socket, &QTcpSocket::readyRead, this, &MainWindow::onServerResponse);
     connect(socket, &QTcpSocket::errorOccurred, this, [](QAbstractSocket::SocketError error) {
         qDebug() << "Ошибка подключения:" << error;
     });
-
-    socket->connectToHost("127.0.0.1", 1244); // IP сервера и порт
 }
+
 
 
 
@@ -590,32 +634,42 @@ void MainWindow::BDUpdata()
         qDebug() << "Нет ответа от сервера в течение 3 секунд.";
         return;
     }
+
     QStringList rows = QString(response).split("\n", Qt::SkipEmptyParts);
     response.clear();
+
+    tableWidget->setRowCount(0);  // Очищаем таблицу перед загрузкой новых данных
+
+    QVector<bool> importantDates(rows.size(), false);  // Массив для отслеживания важных дат
     int row = 0;
-    tableWidget->setRowCount(0); // Очищаем таблицу перед загрузкой данных
 
     for (const QString &line : rows) {
         QStringList columns = line.split(",");
-        if (columns.size() < 5) continue; // Пропускаем некорректные строки
+        if (columns.size() < 5) continue;  // Пропускаем некорректные строки
+
+        // Отмечаем важные даты
+        bool isImportant = (columns[4] == "true");
+        importantDates[row] = isImportant;
 
         tableWidget->insertRow(row);
         tableWidget->setItem(row, 0, new QTableWidgetItem(columns[0])); // ID
         tableWidget->setItem(row, 1, new QTableWidgetItem(columns[1])); // Дата
         tableWidget->setItem(row, 2, new QTableWidgetItem(columns[2])); // Название
         tableWidget->setItem(row, 3, new QTableWidgetItem(columns[3])); // Описание
-        qDebug()<< columns[4];
-
-        // Выделяем важные даты цветом
-        if (columns[4] == "true") {
-            qDebug()<< columns[2];
-            for (int col = 0; col < 4; ++col) {
-                tableWidget->item(row, col)->setBackground(QColor(176, 196, 222));
-            }
-        }
-
 
         row++;
     }
-     qDebug() << "this func BDUpdata";
+
+    // Применяем форматирование для важности дат
+    for (int i = 0; i < importantDates.size(); ++i) {
+        if (importantDates[i]) {
+            for (int col = 0; col < 4; ++col) {
+                tableWidget->item(i, col)->setBackground(QColor(176, 196, 222));
+            }
+        }
+    }
+
+    qDebug() << "this func BDUpdata";
 }
+
+

@@ -26,6 +26,7 @@
 #include <QTcpSocket>
 #include<QThread>
 #include<QCoreApplication>
+#include<QIcon>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -52,6 +53,12 @@ private:
     void onServerResponse();
     void sendRequest(const QString &request);
     void BDUpdata();
+    void CreateTable();
+    void CreateAddButton();
+    void CreateDelButton();
+    void CreateSearchLine();
+    void CreateExportButton();
+    void CreateImportButton();
 
 
 
@@ -61,6 +68,10 @@ private:
     QTableWidget *tableWidget;
     QPushButton *addButton;
     QPushButton *deleteButton;
+    QPushButton *exportButton;
+    QPushButton *importButton;
+
+    QGridLayout *gridLayout;
 
     QSystemTrayIcon *trayIcon;     // Иконка в системном трее для уведомлений
 
