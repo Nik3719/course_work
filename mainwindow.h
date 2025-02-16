@@ -21,12 +21,14 @@
 #include <QContextMenuEvent>  // Для использования QContextMenuEvent
 #include <QFileDialog>
 #include <QTextStream>
-#include <QFileDialog>
-#include <QTextStream>
 #include <QTcpSocket>
 #include<QThread>
 #include<QCoreApplication>
 #include<QIcon>
+#include <QApplication>
+#include <QWidget>
+#include <QSharedMemory>
+
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
