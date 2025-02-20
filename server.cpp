@@ -114,23 +114,15 @@ void Server::handleRegister(QTcpSocket *clientSocket, const QStringList &parts) 
 
     // Проверяем, существует ли уже пользователь с таким именем
     QSqlQuery query;
-    query.prepare("SELECT COUNT(*) FROM users WHERE username = :username");
-    query.bindValue(":username", username);
+    query.prepare("SELECT COUNT(*) FROM users WHERE login = ?");
+    query.addBindValue(username);
     if (!query.exec()) {
         qDebug() << "Ошибка проверки пользователя:" << query.lastError().text();
         clientSocket->write("REG_ERROR|Ошибка базы данных");
         clientSocket->flush();
         return;
     }
-    if (!query.next()) {
-        qDebug() << "Ошибка: нет данных в результате запроса";
-        return;
-    }
-
     query.next();
-
-
-
     if (query.value(0).toInt() > 0) {
         clientSocket->write("REG_ERROR|Пользователь уже существует");
         clientSocket->flush();
@@ -138,7 +130,7 @@ void Server::handleRegister(QTcpSocket *clientSocket, const QStringList &parts) 
     }
 
     // Регистрируем нового пользователя
-    query.prepare("INSERT INTO users (username, password) VALUES (?, ?)");
+    query.prepare("INSERT INTO users (login, password) VALUES (?, ?)");
     query.addBindValue(username);
     // Если у вас есть функция хэширования, например:
     // QString hashFunction(const QString &password)
@@ -153,6 +145,7 @@ void Server::handleRegister(QTcpSocket *clientSocket, const QStringList &parts) 
         clientSocket->flush();
     }
 }
+
 
 
 QString Server::hashFunction(const QString &input) {
