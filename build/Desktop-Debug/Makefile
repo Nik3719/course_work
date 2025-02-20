@@ -52,10 +52,16 @@ OBJECTS_DIR   = ./
 
 ####### Files
 
-SOURCES       = ../../main.cpp \
-		../../mainwindow.cpp moc_mainwindow.cpp
-OBJECTS       = main.o \
+SOURCES       = ../../LoginDialog.cpp \
+		../../main.cpp \
+		../../mainwindow.cpp \
+		../../network.cpp moc_LoginDialog.cpp \
+		moc_mainwindow.cpp
+OBJECTS       = LoginDialog.o \
+		main.o \
 		mainwindow.o \
+		network.o \
+		moc_LoginDialog.o \
 		moc_mainwindow.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt6/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt6/mkspecs/common/unix.conf \
@@ -125,8 +131,12 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt6/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt6/mkspecs/features/exceptions.prf \
 		/usr/lib/x86_64-linux-gnu/qt6/mkspecs/features/yacc.prf \
 		/usr/lib/x86_64-linux-gnu/qt6/mkspecs/features/lex.prf \
-		../../../../untitled3.pro ../../mainwindow.h ../../main.cpp \
-		../../mainwindow.cpp
+		../../../../untitled3.pro ../../LoginDialog.h \
+		../../mainwindow.h \
+		../../network.h ../../LoginDialog.cpp \
+		../../main.cpp \
+		../../mainwindow.cpp \
+		../../network.cpp
 QMAKE_TARGET  = untitled3
 DESTDIR       = 
 TARGET        = untitled3
@@ -302,8 +312,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt6/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../../mainwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents ../../main.cpp ../../mainwindow.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../../LoginDialog.h ../../mainwindow.h ../../network.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../../LoginDialog.cpp ../../main.cpp ../../mainwindow.cpp ../../network.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents ../../mainwindow.ui $(DISTDIR)/
 
 
@@ -336,9 +346,14 @@ compiler_moc_predefs_clean:
 moc_predefs.h: /usr/lib/x86_64-linux-gnu/qt6/mkspecs/features/data/dummy.cpp
 	g++ -pipe -O2 -std=gnu++1z -Wall -Wextra -dM -E -o moc_predefs.h /usr/lib/x86_64-linux-gnu/qt6/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all: moc_mainwindow.cpp
+compiler_moc_header_make_all: moc_LoginDialog.cpp moc_mainwindow.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) moc_mainwindow.cpp
+	-$(DEL_FILE) moc_LoginDialog.cpp moc_mainwindow.cpp
+moc_LoginDialog.cpp: ../../LoginDialog.h \
+		moc_predefs.h \
+		/usr/lib/qt6/libexec/moc
+	/usr/lib/qt6/libexec/moc $(DEFINES) --include '/home/nik/Рабочий стол/course_work/build/Desktop-Debug/moc_predefs.h' -I/usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ -I'/home/nik/Рабочий стол/course_work' -I/usr/include/x86_64-linux-gnu/qt6 -I/usr/include/x86_64-linux-gnu/qt6/QtWidgets -I/usr/include/x86_64-linux-gnu/qt6/QtGui -I/usr/include/x86_64-linux-gnu/qt6/QtSql -I/usr/include/x86_64-linux-gnu/qt6/QtNetwork -I/usr/include/x86_64-linux-gnu/qt6/QtCore -I. -I/usr/include/c++/14 -I/usr/include/x86_64-linux-gnu/c++/14 -I/usr/include/c++/14/backward -I/usr/lib/gcc/x86_64-linux-gnu/14/include -I/usr/local/include -I/usr/include/x86_64-linux-gnu -I/usr/include ../../LoginDialog.h -o moc_LoginDialog.cpp
+
 moc_mainwindow.cpp: ../../mainwindow.h \
 		moc_predefs.h \
 		/usr/lib/qt6/libexec/moc
@@ -365,11 +380,24 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean compiler_ui
 
 ####### Compile
 
-main.o: ../../main.cpp ../../mainwindow.h
+LoginDialog.o: ../../LoginDialog.cpp ../../LoginDialog.h \
+		../../network.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o LoginDialog.o ../../LoginDialog.cpp
+
+main.o: ../../main.cpp ../../mainwindow.h \
+		../../LoginDialog.h \
+		../../network.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../../main.cpp
 
-mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h
+mainwindow.o: ../../mainwindow.cpp ../../mainwindow.h \
+		../../network.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o mainwindow.o ../../mainwindow.cpp
+
+network.o: ../../network.cpp ../../network.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o network.o ../../network.cpp
+
+moc_LoginDialog.o: moc_LoginDialog.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_LoginDialog.o moc_LoginDialog.cpp
 
 moc_mainwindow.o: moc_mainwindow.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_mainwindow.o moc_mainwindow.cpp

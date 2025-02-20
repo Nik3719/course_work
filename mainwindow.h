@@ -28,6 +28,7 @@
 #include <QApplication>
 #include <QWidget>
 #include <QSharedMemory>
+#include<QProcess>
 
 
 class MainWindow : public QMainWindow {
@@ -44,13 +45,13 @@ private slots:
     void checkDate();
     void exportToCSV();
     void importFromCSV();
+    void searchByName();
+    void createContextMenu(int row);
 
 
 private:
-    void initDatabase();
-    void createContextMenu(int row);
+
     void onTableWidgetCustomContextMenuRequested(const QPoint &pos);
-    void searchByName();
     void connectToServer();
     void onServerResponse();
     void sendRequest(const QString &request);
@@ -61,6 +62,8 @@ private:
     void CreateSearchLine();
     void CreateExportButton();
     void CreateImportButton();
+    void onLogoutClicked();
+    void CreateLogoutButton();
 
 
 
@@ -72,13 +75,17 @@ private:
     QPushButton *deleteButton;
     QPushButton *exportButton;
     QPushButton *importButton;
+    QPushButton* logoutButton;
 
     QGridLayout *gridLayout;
 
+    // QTcpSocket *socket;
+    QByteArray response;
+
+
     QSystemTrayIcon *trayIcon;     // Иконка в системном трее для уведомлений
 
-    QTcpSocket *socket;
-    QByteArray response;
+
 };
 
 
