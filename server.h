@@ -8,6 +8,8 @@
 #include <QSqlError>
 #include <QDate>
 #include <QCryptographicHash>
+#include <QDebug>
+#include <QCoreApplication>
 
 
 
@@ -24,7 +26,6 @@ protected:
     void incomingConnection(qintptr socketDescriptor) override;
 
 private slots:
-    //void onClientConnected();
 
 
 private:
@@ -32,9 +33,7 @@ private:
     void onReadyRead();
     void handleAddDate(QTcpSocket *clientSocket, const QStringList &parts);
     void handleDeleteDate(QTcpSocket *clientSocket, const QStringList &parts);
-    void handleCheckDate(QTcpSocket *clientSocket);
     void handleGetDates(QTcpSocket *clientSocket, const QStringList &parts);
-    void handleSearchByName(QTcpSocket *clientSocket, const QString &name);
     void handleEditDate(QTcpSocket *clientSocket, const QStringList &parts);
     void handleImportCSV(QTcpSocket *clientSocket, const QStringList &parts);
     void handleLogin(QTcpSocket *clientSocket, const QStringList &parts);

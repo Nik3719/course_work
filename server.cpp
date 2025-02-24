@@ -1,9 +1,5 @@
 #include "server.h"
-#include <QDebug>
-#include <QCoreApplication>
-#include <QTcpServer>
-#include <QSqlDatabase>
-#include <QSqlError>
+
 
 Server::Server(QObject *parent) : QTcpServer(parent) {
     // Подключаемся к базе данных
@@ -20,17 +16,6 @@ Server::Server(QObject *parent) : QTcpServer(parent) {
         qDebug() << "Подключение к БД успешно!";
     }
 
-    // Выбираем порт, на котором будет слушать сервер (например, 1234)
-    quint16 port = 1244;
-
-    // Пытаемся запустить прослушивание порта
-    if (!listen(QHostAddress::Any, port)) {
-        qDebug() << "Порт" << port << "уже используется другим процессом. Завершаем приложение.";
-        exit(1);
-        return; // На всякий случай выходим из конструктора
-    } else {
-        qDebug() << "Сервер слушает порт" << port;
-    }
 }
 
 Server::~Server() {
@@ -38,8 +23,12 @@ Server::~Server() {
 }
 
 void Server::startServer() {
-    if (!this->listen(QHostAddress::Any, 1244)) {
+    // Выбираем порт, на котором будет слушать сервер
+    quint16 port = 1244;
+    if (!this->listen(QHostAddress::Any, port)) {
         qDebug() << "Ошибка запуска сервера:" << this->errorString();
+        qDebug() << "Порт" << port << "уже используется другим процессом. Завершаем приложение.";
+        exit(0);
     } else {
         qDebug() << "Сервер запущен на порту 1234";
     }
@@ -53,7 +42,11 @@ void Server::incomingConnection(qintptr socketDescriptor) {
     connect(clientSocket, &QTcpSocket::disconnected, this, &Server::onClientDisconnected);
 
     clients.append(clientSocket);
-    qDebug() << "Новое подключение: " << socketDescriptor;
+    qDebug() << "Новое подключение: "
+             << clientSocket->peerAddress().toString()
+             << ":"
+             << clientSocket->peerPort();
+
 }
 
 
@@ -71,7 +64,9 @@ void Server::onReadyRead() {
     QString user_id = parts[0];
 
     QString command = parts[1];
+
     qDebug()<< user_id << " " << command;
+
 
     if (command == "GET_DATES") {
         handleGetDates(clientSocket, parts);
@@ -81,9 +76,6 @@ void Server::onReadyRead() {
     }
     else if (command == "DELETE_DATE" && parts.size() > 1) {
         handleDeleteDate(clientSocket, parts);
-    }
-    else if (command == "CHECK_DATE") {
-        handleCheckDate(clientSocket);
     }
     else if (command == "EDIT_DATE" && parts.size() == 7) {
         handleEditDate(clientSocket, parts);
@@ -132,8 +124,6 @@ void Server::handleRegister(QTcpSocket *clientSocket, const QStringList &parts) 
     // Регистрируем нового пользователя
     query.prepare("INSERT INTO users (login, password) VALUES (?, ?)");
     query.addBindValue(username);
-    // Если у вас есть функция хэширования, например:
-    // QString hashFunction(const QString &password)
     query.addBindValue(hashFunction(password));
 
     if (query.exec()) {
@@ -165,13 +155,11 @@ void Server::handleLogin(QTcpSocket *clientSocket, const QStringList &parts)
     QString login = parts[2];
     QString password = parts[3];
 
-    qDebug() << "login " << login << " " << password;
+    qDebug() << "login " << login << " " << "password" << password;
 
-    // Для безопасности рекомендуется хэшировать пароль
     QString hashedPassword = hashFunction(password);
 
     QSqlQuery query;
-    // Обновляем запрос, чтобы вернуть также идентификатор пользователя
     query.prepare("SELECT id, password FROM users WHERE login = :username");
     query.bindValue(":username", login);
 
@@ -187,7 +175,6 @@ void Server::handleLogin(QTcpSocket *clientSocket, const QStringList &parts)
         qDebug() << "storedPassword " << storedPassword;
         if (storedPassword == hashedPassword) {
             int userId = query.value("id").toInt();
-            // Отправляем клиенту сообщение с идентификатором пользователя, например, "OK 123"
             clientSocket->write(("OK|" + QString::number(userId)).toUtf8());
         } else {
             clientSocket->write("ERROR|Неверный пароль");
@@ -206,7 +193,7 @@ void Server::handleImportCSV(QTcpSocket *clientSocket, const QStringList &parts)
         return;
     }
 
-    QString user_id = parts[0].trimmed();  // ID пользователя
+    QString user_id = parts[0].trimmed();
     QString csvData = parts.mid(2).join("|");  // Соединяем все части после "IMPORT_CSV"
 
     qDebug() << "User ID:" << user_id;
@@ -263,7 +250,7 @@ void Server::handleEditDate(QTcpSocket *clientSocket, const QStringList &parts) 
     query.bindValue(":date", newDate);
     query.bindValue(":name", newName);
     query.bindValue(":description", newDescription);
-    query.bindValue(":important", (isImportant == "1") ? QVariant(true) : QVariant(false));  // Правильное приведение типа
+    query.bindValue(":important", (isImportant == "1") ? QVariant(true) : QVariant(false));
     query.bindValue(":id", id);
 
     if (query.exec()) {
@@ -279,24 +266,21 @@ void Server::handleEditDate(QTcpSocket *clientSocket, const QStringList &parts) 
 
 
 void Server::handleGetDates(QTcpSocket *clientSocket, const QStringList &parts) {
-    QString user_id = parts[0];  // Получаем user_id из запроса
+    QString user_id = parts[0];
     QSqlQuery query;
 
-    // Изменяем запрос, чтобы учитывать user_id
+
     query.prepare("SELECT id, date, name, description, is_important FROM dates WHERE user_id = :user_id ORDER BY id");
     query.bindValue(":user_id", user_id);  // Привязываем значение user_id из запроса
 
     if (query.exec()) {
         QByteArray response;
-
-        // Если результат пустой
         if (!query.next()) {
             clientSocket->write("NO_DATA");  // Отправляем, если данных нет
             clientSocket->flush();
             return;
         }
 
-        // Формируем данные в виде строки
         do {
             response += query.value(0).toString().toUtf8() + "|" +
                         query.value(1).toString().toUtf8() + "|" +
@@ -307,7 +291,7 @@ void Server::handleGetDates(QTcpSocket *clientSocket, const QStringList &parts) 
 
         clientSocket->write(response);
     } else {
-        clientSocket->write("DB_ERROR");  // Ошибка при запросе
+        clientSocket->write("DB_ERROR");
     }
 
     clientSocket->flush();
@@ -333,15 +317,15 @@ void Server::handleAddDate(QTcpSocket *clientSocket, const QStringList &parts) {
     if (query.exec()) {
         qDebug() << "Database no Error:" ;
         clientSocket->write("OK");
-        clientSocket->flush();  // Принудительная отправка данных
-        clientSocket->waitForBytesWritten(); // Ждем, пока данные отправятся
+        clientSocket->flush();
+        clientSocket->waitForBytesWritten();
 
     } else {
         qDebug() << "Database Error:" << query.lastError().text();
 
         clientSocket->write("DB_ERROR");
-        clientSocket->flush();  // Принудительная отправка данных
-        clientSocket->waitForBytesWritten(); // Ждем, пока данные отправятся
+        clientSocket->flush();
+        clientSocket->waitForBytesWritten();
     }
     printDatabaseContents();
 }
@@ -370,60 +354,17 @@ void Server::handleDeleteDate(QTcpSocket *clientSocket, const QStringList &parts
 }
 
 
-void Server::handleSearchByName(QTcpSocket *clientSocket, const QString &name) {
-    QSqlQuery query;
-    query.prepare("SELECT id, date, name, description FROM dates WHERE name LIKE :name");
-    query.bindValue(":name", "%" + name + "%");  // Подставляем имя с подстановочными символами %
-
-    if (!query.exec()) {
-        qDebug() << "Ошибка выполнения запроса: " << query.lastError().text();
-        clientSocket->write("DB_ERROR");
-        return;
-    }
-
-    QStringList result;
-    while (query.next()) {
-        QString row = QString("%1,%2,%3,%4")
-                          .arg(query.value(0).toString())  // id
-                          .arg(query.value(1).toString())  // date
-                          .arg(query.value(2).toString())  // name
-                          .arg(query.value(3).toString()); // description
-        result.append(row);
-    }
-
-    QString response = result.join("\n") + "\n";  // Объединяем строки и добавляем перевод строки
-    clientSocket->write(response.toUtf8());
-    clientSocket->flush();
-    qDebug() << "Отправлен ответ: " << response;
-}
-
-void Server::handleCheckDate(QTcpSocket *clientSocket) {
-    QDate currentDate = QDate::currentDate();
-    QSqlQuery query("SELECT date, name FROM dates WHERE is_important = 1");
-
-    QByteArray response;
-    while (query.next()) {
-        QDate savedDate = QDate::fromString(query.value(0).toString(), "dd.MM.yyyy");
-        if (savedDate.month() == currentDate.month() && savedDate.day() == currentDate.day()) {
-            response += "IMPORTANT_DATE|" + query.value(1).toString().toUtf8() + "\n";
-        }
-    }
-
-    if (!response.isEmpty()) {
-        clientSocket->write(response);
-    } else {
-        clientSocket->write("NO_IMPORTANT_DATES");
-    }
-}
-
 
 
 void Server::onClientDisconnected() {
     QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
     if (clientSocket) {
+        qDebug() << "Клиент отключился" << clientSocket->peerAddress().toString()
+                 << ":"
+                 << clientSocket->peerPort();
         clients.removeAll(clientSocket);
         clientSocket->deleteLater();
-        qDebug() << "Клиент отключился";
+
     }
 }
 
