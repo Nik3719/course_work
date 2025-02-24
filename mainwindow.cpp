@@ -7,57 +7,6 @@
 #include <QSystemTrayIcon>
 #include"network.h"
 
-
-
-
-
-// MainWindow::MainWindow(QWidget *parent)
-//     : QMainWindow(parent) {
-
-//     connectToServer();
-
-//     this->resize(800, 800);
-//     this->setWindowTitle("Приложение для запоминания дат");
-
-//     // Создаем centralWidget и layout
-//     QWidget *centralWidget = new QWidget(this);
-//     QVBoxLayout *layout = new QVBoxLayout();  // Убираем родителя
-
-//     CreateTable();
-//     CreateAddButton();
-//     CreateDelButton();
-//     CreateSearchLine();
-//     CreateExportButton();
-//     CreateImportButton();
-
-//     // logoutButton = new QPushButton("Выход");
-//     // connect(logoutButton, &QPushButton::clicked, this, &MainWindow::onLogoutClicked);
-//     // gridLayout->addWidget(logoutButton, 3, 0, 1, 2); // Добавляем кнопку в layout
-
-
-
-//     gridLayout = new QGridLayout();
-//     gridLayout->addWidget(addButton,0 ,0);
-//     gridLayout->addWidget(deleteButton,0,1);
-//     gridLayout->addWidget(searchLineEdit,1,0,1,2);
-//     gridLayout->addWidget(exportButton, 2, 0);
-//     gridLayout->addWidget(importButton, 2, 1);
-
-//     layout->addLayout(gridLayout);
-//     layout->addWidget(tableWidget);
-
-
-//     // Устанавливаем layout для centralWidget
-//     centralWidget->setLayout(layout);
-//     setCentralWidget(centralWidget);
-
-//     loadDates();
-//     BDUpdata();
-//     // checkDate();
-
-// }
-
-
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -103,11 +52,11 @@ MainWindow::MainWindow(QWidget *parent)
     trayIcon->setIcon(trayIconPNG);
     trayIcon->show();
 
-    QIcon icon("Resource/clock-five.png"); // Проверьте правильность пути к файлу
+    QIcon icon("Resource/clock-five.png");
     setWindowIcon(icon);
 
     loadDates();
-    BDUpdata();
+    TableUpdata();
     // checkDate();
 }
 
@@ -350,7 +299,7 @@ void MainWindow::showAddDateDialog() {
                 else
                 {
                     loadDates();
-                    BDUpdata();
+                    TableUpdata();
                     QMessageBox::information(&dialog, "Успешно", "Добавлено на сервер");
                     response.clear();
                 }
@@ -505,7 +454,7 @@ void MainWindow::createContextMenu(int row) {
                         {
                             response.clear();
                             loadDates();
-                            BDUpdata();
+                            TableUpdata();
                         }
                         else if (response.startsWith("EDIT_ERROR")) {
                             QMessageBox::critical(&dialog, "Ошибка", "Не добавлено на сервер.\n Возможно имя не уникально");
@@ -564,7 +513,7 @@ void MainWindow::searchByName() {
 
 void MainWindow::exportToCSV() {
     loadDates();
-    BDUpdata();
+    TableUpdata();
     QString fileName = QFileDialog::getSaveFileName(this, "Сохранить как CSV", "", "CSV Files (*.csv)");
 
     if (fileName.isEmpty())
@@ -655,7 +604,7 @@ void MainWindow::importFromCSV() {
 
             response.clear();
             loadDates();  // Запрашиваем свежие данные
-            BDUpdata();
+            TableUpdata();
         } else if (response.startsWith("IMPORT_ERROR")) {
             QMessageBox::warning(this, "Ошибка импорта", "Не удалось импортировать в таблицу");
         }
@@ -705,7 +654,7 @@ void MainWindow::loadDates() {
 }
 
 
-// Теперь обработка ответа сервера происходит в onServerResponse
+
 void MainWindow::onServerResponse() {
 
     response = socket->readAll();
@@ -718,7 +667,7 @@ void MainWindow::onServerResponse() {
 }
 
 
-void MainWindow::BDUpdata()
+void MainWindow::TableUpdata()
 {
     if (!socket->waitForReadyRead(3000)) {
         qDebug() << "Нет ответа от сервера в течение 3 секунд.";
@@ -765,7 +714,7 @@ void MainWindow::BDUpdata()
         }
     }
 
-    qDebug() << "this func BDUpdata";
+    qDebug() << "this func TableUpdata";
 }
 
 

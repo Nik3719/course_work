@@ -55,7 +55,7 @@ private:
     void connectToServer();
     void onServerResponse();
     void sendRequest(const QString &request);
-    void BDUpdata();
+    void TableUpdata();
     void CreateTable();
     void CreateAddButton();
     void CreateDelButton();

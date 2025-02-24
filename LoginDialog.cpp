@@ -1,10 +1,4 @@
 #include "LoginDialog.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QMessageBox>
-#include <QDebug>
-#include <QCryptographicHash>
 #include"network.h"
 
 // Пример функции хэширования с использованием QCryptographicHash
@@ -24,11 +18,8 @@ LoginDialog::LoginDialog(QWidget *parent) : QDialog(parent) {
     passwordEdit = new QLineEdit;
     passwordEdit->setEchoMode(QLineEdit::Password);
 
-    loginButton = new QPushButton("Войти");
-    registerButton = new QPushButton("Зарегистрироваться");
-
-    connect(loginButton, &QPushButton::clicked, this, &LoginDialog::onLoginClicked);
-    connect(registerButton, &QPushButton::clicked, this, &LoginDialog::onRegisterClicked);
+    CreateLoginButton();
+    CreateRegistreButton();
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     mainLayout->addWidget(usernameLabel);
@@ -44,6 +35,49 @@ LoginDialog::LoginDialog(QWidget *parent) : QDialog(parent) {
     setLayout(mainLayout);
 }
 
+void LoginDialog::CreateRegistreButton(){
+    registerButton = new QPushButton("Зарегистрироваться");
+
+    registerButton->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #2196F3;"      // синий фон
+        "   border: none;"
+        "   color: white;"
+        "   padding: 12px 24px;"
+        "   font-size: 16px;"
+        "   border-radius: 8px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #1976D2;"      // изменяем фон при наведении
+        "}"
+        );
+
+
+    connect(registerButton, &QPushButton::clicked, this, &LoginDialog::onRegisterClicked);
+}
+
+
+
+void LoginDialog::CreateLoginButton(){
+    loginButton = new QPushButton("Войти");
+
+    loginButton->setStyleSheet(
+        "QPushButton {"
+        "   background-color: #4CAF50;"      // зелёный фон
+        "   border: none;"                   // без рамки
+        "   color: white;"                   // белый текст
+        "   padding: 12px 24px;"             // отступы
+        "   font-size: 16px;"                // размер шрифта
+        "   border-radius: 8px;"             // скруглённые углы
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #45a049;"      // изменяем фон при наведении
+        "}"
+        );
+
+        connect(loginButton, &QPushButton::clicked, this, &LoginDialog::onLoginClicked);
+}
+
 LoginDialog::~LoginDialog() {
     // Если сокет еще открыт, закрываем его
     if (socket->isOpen())
@@ -54,24 +88,19 @@ void LoginDialog::onLoginClicked() {
     QString username = usernameEdit->text();
     QString password = passwordEdit->text();
 
-    // Пример использования сокета для авторизации через сервер
     if(socket->state() != QAbstractSocket::ConnectedState) {
-        // socket->connectToHost("127.0.0.1", 1244); // IP сервера и порт
         if(!socket->waitForConnected(3000)) {
             QMessageBox::warning(this, "Ошибка", "Не удалось подключиться к серверу.");
             return;
         }
     }
 
-    // Формируем запрос на авторизацию, например: "LOGIN <username> <password>"
     QByteArray request = QString("empty_user|LOGIN|%1|%2")
                              .arg(username, password)
                              .toUtf8();
 
     socket->write(request);
     socket->flush();
-
-    // Ожидаем ответ сервера
     socket->waitForReadyRead();
     QByteArray serverResponse = socket->readAll();
 
@@ -80,7 +109,7 @@ void LoginDialog::onLoginClicked() {
     if (parts[0] == "OK") {
         qDebug() << "serverResponse " <<serverResponse << " " << parts[0] << " " << parts[1];
 
-        if (parts.size() >= 2) {  // Уб
+        if (parts.size() >= 2) {
             user_id = parts[1];
 
             // Записываем в файл authorization.txt
@@ -95,8 +124,6 @@ void LoginDialog::onLoginClicked() {
                 qWarning() << "Не удалось открыть файл authorization.txt для записи";
             }
 
-            // Авторизация успешна: закрываем сокет и диалог
-            // socket->disconnectFromHost();
             accept();
             return;
         }
@@ -104,10 +131,6 @@ void LoginDialog::onLoginClicked() {
 
     QMessageBox::warning(this, "Ошибка", "Неверное имя пользователя или пароль");
 }
-
-
-
-
 
 
 
@@ -119,7 +142,6 @@ void LoginDialog::onRegisterClicked() {
         return;
     }
 
-    // Пример использования сокета для регистрации через сервер
     if(socket->state() != QAbstractSocket::ConnectedState) {
         socket->connectToHost("127.0.0.1", 1244); // IP сервера и порт
         if(!socket->waitForConnected(3000)) {
@@ -144,16 +166,3 @@ void LoginDialog::onRegisterClicked() {
     QMessageBox::warning(this, "Ошибка", "Не удалось зарегистрироваться. Возможно, пользователь уже существует.");
 }
 
-// Если вы хотите оставить возможность локальной проверки (например, через базу данных),
-// можно реализовать эти функции следующим образом (пример ниже не используется в данном сокет-методе):
-
-bool LoginDialog::authenticate(const QString &username, const QString &password) {
-    // Здесь можно добавить логику локальной аутентификации через БД,
-    // например, используя QSqlQuery. Этот метод можно вызвать, если сервер недоступен.
-    return false;
-}
-
-bool LoginDialog::registerUser(const QString &username, const QString &password) {
-    // Здесь можно добавить логику локальной регистрации через БД.
-    return false;
-}

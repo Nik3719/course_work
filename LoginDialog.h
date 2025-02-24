@@ -6,6 +6,12 @@
 #include <QPushButton>
 #include <QTcpSocket>
 #include<QFile>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QMessageBox>
+#include <QDebug>
+#include <QCryptographicHash>
 
 
 class LoginDialog : public QDialog {
@@ -19,16 +25,12 @@ private slots:
     void onRegisterClicked();
 
 private:
+    void CreateLoginButton();
+    void CreateRegistreButton();
     QLineEdit *usernameEdit;
     QLineEdit *passwordEdit;
     QPushButton *loginButton;
     QPushButton *registerButton;
-
-    // QTcpSocket *socket; // Сокет, используемый для подключения
-
-
-    bool authenticate(const QString &username, const QString &password);
-    bool registerUser(const QString &username, const QString &password);
 };
 
 #endif // LOGINDIALOG_H
