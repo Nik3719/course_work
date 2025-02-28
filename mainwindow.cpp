@@ -57,7 +57,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     loadDates();
     TableUpdata();
-    // checkDate();
+    checkDate();
 }
 
 void MainWindow::CreateLogoutButton() {
@@ -369,32 +369,41 @@ void MainWindow::deleteDate() {
 
 
 
-
-
 void MainWindow::checkDate() {
+    loadDates();
+    TableUpdata();
 
-    socket->write("GET_DATES");
-    socket->waitForReadyRead();
-    QStringList rows = QString(response).split("\n", Qt::SkipEmptyParts);
-    response.clear();
-    int row = 0;
     QDate currentDate = QDate::currentDate();
-    for (const QString &line : rows) {
-        QStringList columns = line.split(",");
-        QDate savedDate = QDate::fromString(columns[1].trimmed(), "yyyy-MM-dd");
-        // Если дата совпадает, показываем уведомление
-        if (savedDate.month() == currentDate.month() && savedDate.day() == currentDate.day()) {
+    QVector<bool> importantDates(tableWidget->rowCount(), false);
 
-            QString message = QString("Сегодня важная дата: %1").arg(columns[2].trimmed());
-            trayIcon->showMessage("Напоминание", message, QSystemTrayIcon::Information, 1000); // Уведомление на 5 секунд
-
-            QString command = QString("notify-send 'Напоминание' '%1'").arg(message);
-            system(command.toUtf8().constData());
+    for (int row = 0; row < tableWidget->rowCount(); ++row) {
+        if (tableWidget->item(row, 0)->background() == QColor(176, 196, 222)) {
+            importantDates[row] = true;
         }
-        row++;
     }
 
+    for (int row = 0; row < tableWidget->rowCount(); ++row) {
+        QTableWidgetItem *dateItem = tableWidget->item(row, 1);
+        QTableWidgetItem *nameItem = tableWidget->item(row, 2);
+
+        if (!dateItem || !nameItem)
+            continue;
+
+        QDate savedDate = QDate::fromString(dateItem->text().trimmed(), "yyyy-MM-dd");
+
+        if (importantDates[row] && savedDate.month() == currentDate.month() && savedDate.day() == currentDate.day()) {
+            QString message = QString("Сегодня важная дата: %1").arg(nameItem->text().trimmed());
+
+            // Показываем уведомление через трей
+            trayIcon->showMessage("Напоминание", message, QSystemTrayIcon::Information, 5000);
+        }
+    }
 }
+
+
+
+
+
 
 
 
