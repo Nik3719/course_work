@@ -4,7 +4,7 @@
 Server::Server(QObject *parent) : QTcpServer(parent) {
     // Подключаемся к базе данных
     db = QSqlDatabase::addDatabase("QPSQL");
-    db.setHostName("localhost");
+    db.setHostName("db");
     db.setDatabaseName("mem_date");
     db.setUserName("postgres");
     db.setPassword("nik");
@@ -71,13 +71,13 @@ void Server::onReadyRead() {
     if (command == "GET_DATES") {
         handleGetDates(clientSocket, parts);
     }
-    else if (command == "ADD_DATE" && parts.size() == 6) {
+    else if (command == "ADD_DATE") {
         handleAddDate(clientSocket, parts);
     }
     else if (command == "DELETE_DATE" && parts.size() > 1) {
         handleDeleteDate(clientSocket, parts);
     }
-    else if (command == "EDIT_DATE" && parts.size() == 7) {
+    else if (command == "EDIT_DATE") {
         handleEditDate(clientSocket, parts);
     }
     else if (command == "IMPORT_CSV") {
@@ -244,13 +244,15 @@ void Server::handleEditDate(QTcpSocket *clientSocket, const QStringList &parts) 
     QString newName = parts[4];
     QString newDescription = parts[5];
     QString isImportant = parts[6];  // Значение "0" или "1"
+    QString newColor = parts[7];
 
     QSqlQuery query;
-    query.prepare("UPDATE dates SET date = :date, name = :name, description = :description, is_important = :important WHERE id = :id");
+    query.prepare("UPDATE dates SET date = :date, name = :name, description = :description, is_important = :important, color = :color WHERE id = :id");
     query.bindValue(":date", newDate);
     query.bindValue(":name", newName);
     query.bindValue(":description", newDescription);
     query.bindValue(":important", (isImportant == "1") ? QVariant(true) : QVariant(false));
+    query.bindValue(":color", newColor);  // Добавляем новый цвет
     query.bindValue(":id", id);
 
     if (query.exec()) {
@@ -269,8 +271,7 @@ void Server::handleGetDates(QTcpSocket *clientSocket, const QStringList &parts) 
     QString user_id = parts[0];
     QSqlQuery query;
 
-
-    query.prepare("SELECT id, date, name, description, is_important FROM dates WHERE user_id = :user_id ORDER BY id");
+    query.prepare("SELECT id, date, name, description, is_important, color FROM dates WHERE user_id = :user_id ORDER BY id");
     query.bindValue(":user_id", user_id);  // Привязываем значение user_id из запроса
 
     if (query.exec()) {
@@ -286,7 +287,9 @@ void Server::handleGetDates(QTcpSocket *clientSocket, const QStringList &parts) 
                         query.value(1).toString().toUtf8() + "|" +
                         query.value(2).toString().toUtf8() + "|" +
                         query.value(3).toString().toUtf8() + "|" +
-                        query.value(4).toString().toUtf8() + "\n";
+                        query.value(4).toString().toUtf8() + "|" +  // передаем цвет
+                        query.value(5).toString().toUtf8() + "\n"; // color field
+
         } while (query.next());
 
         clientSocket->write(response);
@@ -298,20 +301,25 @@ void Server::handleGetDates(QTcpSocket *clientSocket, const QStringList &parts) 
 }
 
 
+
 void Server::handleAddDate(QTcpSocket *clientSocket, const QStringList &parts) {
     QString user_id = parts[0];
     QString date = parts[2];
     QString name = parts[3];
     QString description = parts[4];
     bool isImportant = (bool)parts[5].toInt();
+    QString color = parts[6];
 
     QSqlQuery query;
-    query.prepare("INSERT INTO dates (user_id, date, name, description, is_important) VALUES (:user_id, :date, :name, :description, :is_important)");
-     query.bindValue(":user_id", user_id);
+    query.prepare("INSERT INTO dates (user_id, date, name, description, is_important, color) "
+              "VALUES (:user_id, :date, :name, :description, :is_important, :color)");
+    query.bindValue(":user_id", user_id);
     query.bindValue(":date", date);
     query.bindValue(":name", name);
     query.bindValue(":description", description);
     query.bindValue(":is_important", isImportant);
+    query.bindValue(":color", color);
+
 
 
     if (query.exec()) {
