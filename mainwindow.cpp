@@ -27,11 +27,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Устанавливаем русскую локаль (это влияет на форматирование дат)
     QLocale::setDefault(QLocale(QLocale::Russian, QLocale::Russia));
 
-    // Инициализируем сетевые элементы
-    socket = new QTcpSocket(this);
-    user_id = "5"; // Для примера
-    connectToServer();
-
     this->resize(1000, 800);
     this->setWindowTitle("Приложение для запоминания дат");
 
@@ -53,13 +48,14 @@ MainWindow::MainWindow(QWidget *parent)
     logoutButton = new QPushButton("Выход", this);
     CreateAddButton();
     CreateDelButton();
-    //CreateSearchLine();
+    CreateSearchLine();
     //CreateExportButton();
     //CreateImportButton();
     CreateLogoutButton();
 
     leftLayout->addWidget(addButton);
     leftLayout->addWidget(deleteButton);
+    leftLayout->insertWidget(0, searchLineEdit);
     leftLayout->addWidget(exportButton);
     leftLayout->addWidget(importButton);
     leftLayout->addWidget(logoutButton);
@@ -95,6 +91,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(calendarWidget, &QCalendarWidget::selectionChanged, [=]() {
         updateWeekTable(calendarWidget->selectedDate());
     });
+
 }
 
 
@@ -156,28 +153,30 @@ void MainWindow::CreateLogoutButton() {
 // }
 
 
+void MainWindow::CreateSearchLine()
+{
+    searchLineEdit = new QLineEdit(this);
+    searchLineEdit->setPlaceholderText("Введите имя для поиска");
+    searchLineEdit->setStyleSheet(
+        "QLineEdit {"
+        "border: 2px solid #3498db;"
+        "border-radius: 10px;"
+        "padding: 8px;"
+        "font-size: 16px;"
+        "color: #2c3e50;"
+        "background-color: #ecf0f1;"
+        "}"
+        "QLineEdit:focus {"
+        "border: 2px solid #2980b9;"
+        "background-color: #ffffff;"
+        "}"
+        );
 
-// void MainWindow::CreateSearchLine()
-// {
-//     searchLineEdit = new QLineEdit(this);
-//     searchLineEdit->setPlaceholderText("Введите имя для поиска");
-//     searchLineEdit->setStyleSheet(
-//         "QLineEdit {"
-//         "border: 2px solid #3498db;"      // Синяя рамка
-//         "border-radius: 10px;"            // Закругленные углы
-//         "padding: 8px;"                   // Внутренний отступ
-//         "font-size: 16px;"                // Размер текста
-//         "color: #2c3e50;"                 // Цвет текста
-//         "background-color: #ecf0f1;"      // Светло-серый фон
-//         "}"
-//         "QLineEdit:focus {"
-//         "border: 2px solid #2980b9;"      // Цвет рамки при фокусе
-//         "background-color: #ffffff;"      // Белый фон при фокусе
-//         "}"
-//         );
+    // Добавляем строку поиска в верх левой панели
 
-//     connect(searchLineEdit, &QLineEdit::textChanged, this, &MainWindow::searchByName);
-// }
+
+    connect(searchLineEdit, &QLineEdit::textChanged, this, &MainWindow::searchByName);
+}
 
 
 
@@ -281,7 +280,7 @@ void MainWindow::updateWeekTable(const QDate &selectedDate)
 
     // Вычисляем понедельник выбранной недели (неделя начинается с понедельника)
     int dayOfWeek = selectedDate.dayOfWeek(); // 1 = понедельник
-    QDate monday = selectedDate.addDays(1 - dayOfWeek);
+    QDate monday = selectedDate.addDays(-dayOfWeek + 1); // Исправление вычисления понедельника
 
     // Для каждого дня недели создаем колонку
     for (int i = 0; i < 7; i++) {
@@ -299,26 +298,48 @@ void MainWindow::updateWeekTable(const QDate &selectedDate)
         // Добавляем события для данного дня
         for (const QString &line : eventsData) {
             QStringList fields = line.split("|");
-            if (fields.size() < 4)
+            if (fields.size() < 6)
                 continue;
-            // Формат: id|yyyy-MM-dd|name|description|isImportant
+
             QDate evDate = QDate::fromString(fields[1], "yyyy-MM-dd");
             if (evDate == day) {
                 QString eventId = fields[0];
                 QString evName = fields[2];
                 QString evDesc = fields[3];
-                // Передаем дату события для редактирования
-                EventWidget *eventWidget = new EventWidget(eventId, evName, evDesc, evDate, this);
-                // Соединяем сигнал редактирования с нашим слотом
+                bool isImportant = (fields.size() >= 5 && fields[4] == "1");
+
+                // Цвет события получаем из базы данных (предполагаем, что это строка HEX или обычный цвет)
+                QString colorStr = fields[5];
+                QColor eventColor;
+                if (colorStr.isEmpty()) {
+                    // Если цвет не задан, используем дефолтный (например, зеленый)
+                    eventColor = QColor(0, 255, 0);
+                } else {
+                    eventColor = QColor(colorStr);  // QColor может правильно распознавать HEX или rgb
+                }
+
+                // Создаем виджет для события с полученным цветом
+                // При создании EventWidget передавайте цвет из данных
+                EventWidget* eventWidget = new EventWidget(
+                    eventId,
+                    evName,
+                    evDesc,
+                    evDate,
+                    eventColor,  // <-- здесь передаем цвет
+                    this
+                    );
                 connect(eventWidget, &EventWidget::editRequested,
                         this, &MainWindow::handleEditRequest);
                 dayLayout->addWidget(eventWidget);
             }
         }
-        dayLayout->addStretch();
-        weekLayout->addWidget(dayWidget);
+
+        dayLayout->addStretch();  // Добавляем растяжение для выравнивания
+        weekLayout->addWidget(dayWidget);  // Добавляем день в общий layout
     }
 }
+
+
 
 void MainWindow::showAddDateDialog()
 {
@@ -331,13 +352,25 @@ void MainWindow::showAddDateDialog()
     dateEdit->setCalendarPopup(true);
     QLineEdit *nameEdit = new QLineEdit(&dialog);
     QTextEdit *descriptionEdit = new QTextEdit(&dialog);
-    descriptionEdit->setMinimumHeight(80);  // Делаем поле многострочным
+    descriptionEdit->setMinimumHeight(80);  // Многострочное поле
     QCheckBox *importantCheckBox = new QCheckBox("Отметить как важное", &dialog);
+
+    // Добавляем выбор цвета через QComboBox
+    QComboBox *colorComboBox = new QComboBox(&dialog);
+    colorComboBox->addItem("Красный", "#FF0000");  // Red
+    colorComboBox->addItem("Оранжевый", "#FF7F00");  // Orange
+    colorComboBox->addItem("Желтый", "#FFFF00");  // Yellow
+    colorComboBox->addItem("Зеленый", "#00FF00");  // Green
+    colorComboBox->addItem("Голубой", "#0000FF");  // Blue
+    colorComboBox->addItem("Индиго", "#4B0082");  // Indigo
+    colorComboBox->addItem("Фиолетовый", "#8B00FF");  // Violet
+
 
     form.addRow("Дата:", dateEdit);
     form.addRow("Название:", nameEdit);
     form.addRow("Описание:", descriptionEdit);
     form.addRow(importantCheckBox);
+    form.addRow("Цвет:", colorComboBox);
 
     QPushButton *submitButton = new QPushButton("Сохранить", &dialog);
     form.addWidget(submitButton);
@@ -345,19 +378,23 @@ void MainWindow::showAddDateDialog()
     connect(submitButton, &QPushButton::clicked, [&]() {
         QString dateStr = dateEdit->date().toString("yyyy-MM-dd");
         QString name = nameEdit->text();
-        QString description = descriptionEdit->toPlainText(); // Получаем текст из QTextEdit
+        QString description = descriptionEdit->toPlainText();
         bool isImportant = importantCheckBox->isChecked();
+        // Получаем выбранный цвет
+        QString selectedColor = colorComboBox->currentData().toString();
 
         if (name.isEmpty() || description.isEmpty()) {
             QMessageBox::warning(&dialog, "Некорректные данные", "Пожалуйста, заполните все поля.");
             return;
         }
 
-        QString req = QString("ADD_DATE|%1|%2|%3|%4")
+        // Формируем запрос с дополнительным параметром цвета
+        QString req = QString("ADD_DATE|%1|%2|%3|%4|%5")
                           .arg(dateStr)
                           .arg(name)
                           .arg(description)
-                          .arg(isImportant ? "1" : "0");
+                          .arg(isImportant ? "1" : "0")
+                          .arg(selectedColor);
         req = user_id + "|" + req;
 
         socket->write(req.toUtf8());
@@ -448,10 +485,8 @@ void MainWindow::checkDate()
     // Здесь можно реализовать уведомления по важным датам.
 }
 
-// Слот для обработки запроса редактирования от EventWidget.
-// Он принимает 5 параметра: id, новая дата, новое имя, новое описание, флаг важности.
 void MainWindow::handleEditRequest(const QString &id, const QDate &newDate,
-                                   const QString &newName, const QString &newDescription, bool isImportant)
+                                   const QString &newName, const QString &newDescription, bool isImportant, const QString &newColor)
 {
     if (!socket || socket->state() != QAbstractSocket::ConnectedState) {
         QMessageBox::critical(this, "Ошибка", "Нет подключения к серверу!");
@@ -459,14 +494,19 @@ void MainWindow::handleEditRequest(const QString &id, const QDate &newDate,
     }
 
     QString dateStr = newDate.toString("yyyy-MM-dd");
-    QString request = QString("EDIT_DATE|%1|%2|%3|%4|%5")
+
+    // Формируем строку запроса с цветом
+    QString request = QString("EDIT_DATE|%1|%2|%3|%4|%5|%6")
                           .arg(id)
                           .arg(dateStr)
                           .arg(newName)
                           .arg(newDescription)
-                          .arg(isImportant ? "1" : "0");
-    request = user_id + "|" + request;
+                          .arg(isImportant ? "1" : "0")
+                          .arg(newColor); // Добавляем новый цвет
 
+    request = user_id + "|" + request; // Добавляем user_id в начало запроса
+
+    // Отправляем запрос на сервер
     socket->write(request.toUtf8());
     socket->flush();
 
@@ -490,3 +530,41 @@ void MainWindow::handleEditRequest(const QString &id, const QDate &newDate,
         QMessageBox::critical(this, "Ошибка", "Нет ответа от сервера.");
     }
 }
+
+void MainWindow::searchByName()
+{
+    QString searchText = searchLineEdit->text().trimmed().toLower();
+
+    // Обходим все дни недели
+    for (int i = 0; i < weekLayout->count(); ++i) {
+        QLayoutItem *dayItem = weekLayout->itemAt(i);
+        if (!dayItem || !dayItem->widget()) continue;
+
+        QWidget *dayWidget = dayItem->widget();
+        QVBoxLayout *dayLayout = qobject_cast<QVBoxLayout*>(dayWidget->layout());
+        if (!dayLayout) continue;
+
+        bool hasVisibleEvents = false;
+
+        // Обходим все события в дне (начиная с индекса 1, пропуская заголовок)
+        for (int j = 1; j < dayLayout->count(); ++j) {
+            QLayoutItem *eventItem = dayLayout->itemAt(j);
+            if (!eventItem || !eventItem->widget()) continue;
+
+            EventWidget *eventWidget = qobject_cast<EventWidget*>(eventItem->widget());
+            if (!eventWidget) continue;
+
+            QString eventName = eventWidget->getEventName().toLower();
+            bool match = eventName.contains(searchText);
+
+            // Скрываем или показываем событие
+            eventWidget->setVisible(match || searchText.isEmpty());
+            if (match) hasVisibleEvents = true;
+        }
+
+        // Скрываем день, если нет событий и есть поисковый запрос
+        dayWidget->setVisible(hasVisibleEvents || searchText.isEmpty());
+    }
+}
+
+

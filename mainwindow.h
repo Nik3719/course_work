@@ -32,15 +32,14 @@ private:
     QPushButton *logoutButton;
 
     // Сетевые элементы
-    QTcpSocket *socket;
     QByteArray response;
-    QString user_id; // Например, "1"
     QSystemTrayIcon *trayIcon;
 
     QScrollArea *weekScrollArea;
     QWidget *weekContainer;
     QHBoxLayout *weekLayout;
     QStringList eventsData;
+    QLineEdit *searchLineEdit;
 
     // Функции работы с сервером и событиями
     void connectToServer();
@@ -52,14 +51,15 @@ private:
     void onServerResponse();
     void handleEditRequest(const QString &id, const QDate &newDate,
                            const QString &newName, const QString &newDescription,
-                           bool isImportant);
+                           bool isImportant, const QString &newColor);
     void CreateAddButton();
     void CreateDelButton();
-    // void CreateSearchLine();
+    void CreateSearchLine();
     // void CreateExportButton();
     // void CreateImportButton();
     void onLogoutClicked();
     void CreateLogoutButton();
+    void searchByName();
 
 };
 

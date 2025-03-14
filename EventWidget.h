@@ -17,19 +17,27 @@
 #include <QDate>
 #include <QFont>
 #include <QTextEdit>
+#include <QComboBox>
+#include <QColor>
+#include <QGraphicsDropShadowEffect>
+#include <QPropertyAnimation>
+#include <QGraphicsOpacityEffect>
 
 class EventWidget : public QFrame {
     Q_OBJECT
 public:
+    // Обновленный конструктор, принимающий QColor
     explicit EventWidget(const QString &id, const QString &eventName, const QString &eventDescription,
-                         const QDate &eventDate, QWidget *parent = nullptr);
+                         const QDate &eventDate, const QColor &eventColor, QWidget *parent = nullptr);
+    QString getEventName() const { return m_eventName; }
 
     QString id() const;
     bool isSelected() const;
 
 signals:
-    void editRequested(const QString &id, const QDate &newDate,
-                       const QString &newName, const QString &newDescription, bool isImportant);
+    void editRequested(const QString& id, const QDate& date,
+                       const QString& name, const QString& description,
+                       bool isImportant, const QString& color);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -41,6 +49,7 @@ private:
     QString m_fullDescription;
     QDate m_date;
     QString m_eventName;
+    QColor m_color;  // Используем QColor для хранения цвета
     QLabel *nameLabel;
     QLabel *descLabel;
 };

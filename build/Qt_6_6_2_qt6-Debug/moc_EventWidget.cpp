@@ -43,22 +43,24 @@ constexpr auto qt_meta_stringdata_CLASSEventWidgetENDCLASS = QtMocHelpers::strin
     "editRequested",
     "",
     "id",
-    "newDate",
-    "newName",
-    "newDescription",
-    "isImportant"
+    "date",
+    "name",
+    "description",
+    "isImportant",
+    "color"
 );
 #else  // !QT_MOC_HAS_STRING_DATA
 struct qt_meta_stringdata_CLASSEventWidgetENDCLASS_t {
-    uint offsetsAndSizes[16];
+    uint offsetsAndSizes[18];
     char stringdata0[12];
     char stringdata1[14];
     char stringdata2[1];
     char stringdata3[3];
-    char stringdata4[8];
-    char stringdata5[8];
-    char stringdata6[15];
+    char stringdata4[5];
+    char stringdata5[5];
+    char stringdata6[12];
     char stringdata7[12];
+    char stringdata8[6];
 };
 #define QT_MOC_LITERAL(ofs, len) \
     uint(sizeof(qt_meta_stringdata_CLASSEventWidgetENDCLASS_t::offsetsAndSizes) + ofs), len 
@@ -68,19 +70,21 @@ Q_CONSTINIT static const qt_meta_stringdata_CLASSEventWidgetENDCLASS_t qt_meta_s
         QT_MOC_LITERAL(12, 13),  // "editRequested"
         QT_MOC_LITERAL(26, 0),  // ""
         QT_MOC_LITERAL(27, 2),  // "id"
-        QT_MOC_LITERAL(30, 7),  // "newDate"
-        QT_MOC_LITERAL(38, 7),  // "newName"
-        QT_MOC_LITERAL(46, 14),  // "newDescription"
-        QT_MOC_LITERAL(61, 11)   // "isImportant"
+        QT_MOC_LITERAL(30, 4),  // "date"
+        QT_MOC_LITERAL(35, 4),  // "name"
+        QT_MOC_LITERAL(40, 11),  // "description"
+        QT_MOC_LITERAL(52, 11),  // "isImportant"
+        QT_MOC_LITERAL(64, 5)   // "color"
     },
     "EventWidget",
     "editRequested",
     "",
     "id",
-    "newDate",
-    "newName",
-    "newDescription",
-    "isImportant"
+    "date",
+    "name",
+    "description",
+    "isImportant",
+    "color"
 };
 #undef QT_MOC_LITERAL
 #endif // !QT_MOC_HAS_STRING_DATA
@@ -100,10 +104,10 @@ Q_CONSTINIT static const uint qt_meta_data_CLASSEventWidgetENDCLASS[] = {
        1,       // signalCount
 
  // signals: name, argc, parameters, tag, flags, initial metatype offsets
-       1,    5,   20,    2, 0x06,    1 /* Public */,
+       1,    6,   20,    2, 0x06,    1 /* Public */,
 
  // signals: parameters
-    QMetaType::Void, QMetaType::QString, QMetaType::QDate, QMetaType::QString, QMetaType::QString, QMetaType::Bool,    3,    4,    5,    6,    7,
+    QMetaType::Void, QMetaType::QString, QMetaType::QDate, QMetaType::QString, QMetaType::QString, QMetaType::Bool, QMetaType::QString,    3,    4,    5,    6,    7,    8,
 
        0        // eod
 };
@@ -123,7 +127,8 @@ Q_CONSTINIT const QMetaObject EventWidget::staticMetaObject = { {
         QtPrivate::TypeAndForceComplete<const QDate &, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
         QtPrivate::TypeAndForceComplete<const QString &, std::false_type>,
-        QtPrivate::TypeAndForceComplete<bool, std::false_type>
+        QtPrivate::TypeAndForceComplete<bool, std::false_type>,
+        QtPrivate::TypeAndForceComplete<const QString &, std::false_type>
     >,
     nullptr
 } };
@@ -134,13 +139,13 @@ void EventWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
         auto *_t = static_cast<EventWidget *>(_o);
         (void)_t;
         switch (_id) {
-        case 0: _t->editRequested((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QDate>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[4])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[5]))); break;
+        case 0: _t->editRequested((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QDate>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[4])),(*reinterpret_cast< std::add_pointer_t<bool>>(_a[5])),(*reinterpret_cast< std::add_pointer_t<QString>>(_a[6]))); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
         int *result = reinterpret_cast<int *>(_a[0]);
         {
-            using _t = void (EventWidget::*)(const QString & , const QDate & , const QString & , const QString & , bool );
+            using _t = void (EventWidget::*)(const QString & , const QDate & , const QString & , const QString & , bool , const QString & );
             if (_t _q_method = &EventWidget::editRequested; *reinterpret_cast<_t *>(_a[1]) == _q_method) {
                 *result = 0;
                 return;
@@ -180,9 +185,9 @@ int EventWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void EventWidget::editRequested(const QString & _t1, const QDate & _t2, const QString & _t3, const QString & _t4, bool _t5)
+void EventWidget::editRequested(const QString & _t1, const QDate & _t2, const QString & _t3, const QString & _t4, bool _t5, const QString & _t6)
 {
-    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t3))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t4))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t5))) };
+    void *_a[] = { nullptr, const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t1))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t2))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t3))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t4))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t5))), const_cast<void*>(reinterpret_cast<const void*>(std::addressof(_t6))) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 QT_WARNING_POP
