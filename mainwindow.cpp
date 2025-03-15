@@ -264,7 +264,11 @@ void MainWindow::loadDates()
         }
 
         QString data = QString::fromUtf8(socket->readAll());
-        eventsData = data.split("\n", Qt::SkipEmptyParts);
+        if (data!="NO_DATA") eventsData = data.split("\n", Qt::SkipEmptyParts);
+        else
+        {
+            eventsData.clear();
+        }
     }
 }
 
