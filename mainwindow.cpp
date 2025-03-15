@@ -488,13 +488,15 @@ void MainWindow::checkDate()
     // Предполагаем, что eventsData — список строк с данными событий в формате:
     // id|yyyy-MM-dd|eventName|eventDescription|isImportant|color
     for (const QString &line : eventsData) {
+        qDebug()<<line;
         QStringList fields = line.split("|");
-        if (fields.size() < 6)
-            continue;
+        // if (fields.size() < 6)
+        //     continue;
 
         QDate evDate = QDate::fromString(fields[1], "yyyy-MM-dd");
         if (evDate == currentDate) {
-            bool isImportant = (fields[4] == "1");
+            bool isImportant = (fields[4] == "true");
+            qDebug()<<fields[0]<<" "<<isImportant;
             if (isImportant) {
                 QString evName = fields[2];
                 QString evDesc = fields[3];
