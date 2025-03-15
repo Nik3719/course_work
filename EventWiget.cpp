@@ -119,7 +119,7 @@ void EventWidget::contextMenuEvent(QContextMenuEvent *event) {
         // Добавляем элемент для выбора цвета
         QComboBox *colorComboBox = new QComboBox(&dialog);
 
-        colorComboBox->addItem("Красный", "#FF0000");  // Red
+        colorComboBox->addItem("Серый", "#808080");  // Red
         colorComboBox->addItem("Оранжевый", "#FF7F00");  // Orange
         colorComboBox->addItem("Желтый", "#FFFF00");  // Yellow
         colorComboBox->addItem("Зеленый", "#00FF00");  // Green

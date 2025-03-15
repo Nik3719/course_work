@@ -89,11 +89,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     loadDates();
     updateWeekTable(calendarWidget->selectedDate());
-    checkDate();
+
 
     connect(calendarWidget, &QCalendarWidget::selectionChanged, [=]() {
         updateWeekTable(calendarWidget->selectedDate());
     });
+    checkDate();
 
 }
 
@@ -357,7 +358,7 @@ void MainWindow::showAddDateDialog()
 
     // Добавляем выбор цвета через QComboBox
     QComboBox *colorComboBox = new QComboBox(&dialog);
-    colorComboBox->addItem("Красный", "#FF0000");  // Red
+    colorComboBox->addItem("Серый", "#808080");  // Red
     colorComboBox->addItem("Оранжевый", "#FF7F00");  // Orange
     colorComboBox->addItem("Желтый", "#FFFF00");  // Yellow
     colorComboBox->addItem("Зеленый", "#00FF00");  // Green
@@ -482,7 +483,28 @@ void MainWindow::deleteDate()
 
 void MainWindow::checkDate()
 {
-    // Здесь можно реализовать уведомления по важным датам.
+    QDate currentDate = QDate::currentDate();
+
+    // Предполагаем, что eventsData — список строк с данными событий в формате:
+    // id|yyyy-MM-dd|eventName|eventDescription|isImportant|color
+    for (const QString &line : eventsData) {
+        QStringList fields = line.split("|");
+        if (fields.size() < 6)
+            continue;
+
+        QDate evDate = QDate::fromString(fields[1], "yyyy-MM-dd");
+        if (evDate == currentDate) {
+            bool isImportant = (fields[4] == "1");
+            if (isImportant) {
+                QString evName = fields[2];
+                QString evDesc = fields[3];
+                QString message = QString("Сегодня: %1\nОписание: %2").arg(evName, evDesc);
+
+                // Используем notify-send для отправки уведомления на Ubuntu
+                QProcess::startDetached("notify-send", QStringList() << "Важное событие" << message);
+            }
+        }
+    }
 }
 
 void MainWindow::handleEditRequest(const QString &id, const QDate &newDate,
