@@ -21,7 +21,8 @@
 #include <algorithm>
 #include <QSet>
 #include<QFileDialog>
-
+#include <QShortcut>
+#include <QKeySequence>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -55,6 +56,7 @@ MainWindow::MainWindow(QWidget *parent)
     CreateExportButton();
     CreateImportButton();
     CreateLogoutButton();
+    setupShortcuts();
 
     leftLayout->addWidget(addButton);
     leftLayout->addWidget(deleteButton);
@@ -96,6 +98,31 @@ MainWindow::MainWindow(QWidget *parent)
     });
     checkDate();
 
+}
+
+
+
+void MainWindow::setupShortcuts()
+{
+    // Шорткат для удаления: клавиша Delete
+    QShortcut *deleteShortcut = new QShortcut(QKeySequence(Qt::Key_Delete), this);
+    connect(deleteShortcut, &QShortcut::activated, this, &MainWindow::deleteDate);
+
+    // Шорткат для добавления: Ctrl+N
+    QShortcut *addShortcut = new QShortcut(QKeySequence("Ctrl+N"), this);
+    connect(addShortcut, &QShortcut::activated, this, &MainWindow::showAddDateDialog);
+
+    // Шорткат для выхода: Ctrl+L
+    QShortcut *logoutShortcut = new QShortcut(QKeySequence("Ctrl+L"), this);
+    connect(logoutShortcut, &QShortcut::activated, this, &MainWindow::onLogoutClicked);
+
+    // Шорткат для экспорта: Ctrl+E
+    QShortcut *exportShortcut = new QShortcut(QKeySequence("Ctrl+E"), this);
+    connect(exportShortcut, &QShortcut::activated, this, &MainWindow::exportToCSV);
+
+    // Шорткат для импорта: Ctrl+I
+    QShortcut *importShortcut = new QShortcut(QKeySequence("Ctrl+I"), this);
+    connect(importShortcut, &QShortcut::activated, this, &MainWindow::importFromCSV);
 }
 
 
@@ -413,6 +440,7 @@ void MainWindow::showAddDateDialog()
                     QMessageBox::critical(&dialog, "Ошибка", "Не добавлено на сервер. Возможно, имя не уникально");
                     response.clear();
                 } else {
+                    socket->readAll();
                     eventsData.clear();
                     loadDates();
                     updateWeekTable(calendarWidget->selectedDate());

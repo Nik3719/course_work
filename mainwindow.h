@@ -62,6 +62,7 @@ private:
     void searchByName();
     void exportToCSV();
     void importFromCSV();
+    void setupShortcuts();
 
 };
 
