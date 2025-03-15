@@ -22,6 +22,8 @@
 #include <QSet>
 #include<QFileDialog>
 
+
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -259,6 +261,7 @@ void MainWindow::loadDates()
             qDebug() << "Нет ответа от сервера";
             return;
         }
+
         QString data = QString::fromUtf8(socket->readAll());
         eventsData = data.split("\n", Qt::SkipEmptyParts);
     }
@@ -713,6 +716,7 @@ void MainWindow::importFromCSV() {
 
     if (socket && socket->state() == QAbstractSocket::ConnectedState) {
         QString request = QString("%1|IMPORT_CSV|%2").arg(user_id).arg(csvData.join("\n"));
+        qDebug()<< request;
 
         socket->write(request.toUtf8());
         socket->flush();
