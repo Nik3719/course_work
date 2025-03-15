@@ -55,11 +55,13 @@ private:
     void CreateAddButton();
     void CreateDelButton();
     void CreateSearchLine();
-    // void CreateExportButton();
-    // void CreateImportButton();
+    void CreateExportButton();
+    void CreateImportButton();
     void onLogoutClicked();
     void CreateLogoutButton();
     void searchByName();
+    void exportToCSV();
+    void importFromCSV();
 
 };
 

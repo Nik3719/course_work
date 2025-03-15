@@ -20,6 +20,7 @@
 #include <QMap>
 #include <algorithm>
 #include <QSet>
+#include<QFileDialog>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -49,8 +50,8 @@ MainWindow::MainWindow(QWidget *parent)
     CreateAddButton();
     CreateDelButton();
     CreateSearchLine();
-    //CreateExportButton();
-    //CreateImportButton();
+    CreateExportButton();
+    CreateImportButton();
     CreateLogoutButton();
 
     leftLayout->addWidget(addButton);
@@ -115,42 +116,40 @@ void MainWindow::CreateLogoutButton() {
 
 
 
-// void MainWindow::CreateExportButton() {
-//     exportButton = new QPushButton("Экспорт в CSV");
-//     connect(exportButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
-//     exportButton->setStyleSheet(
-//         "QPushButton {"
-//         "    background-color: #e74c3c;"  /* Красный фон */
-//         "    color: white;"
-//         "    border-radius: 10px;"
-//         "    padding: 10px;"
-//         "    font-size: 16px;"
-//         "}"
-//         "QPushButton:hover {"
-//         "    background-color: #c0392b;"  /* Темный красный при наведении */
-//         "}"
-//         );
-// }
+void MainWindow::CreateExportButton() {
+    connect(exportButton, &QPushButton::clicked, this, &MainWindow::exportToCSV);
+    exportButton->setStyleSheet(
+        "QPushButton {"
+        "    background-color: #e74c3c;"  /* Красный фон */
+        "    color: white;"
+        "    border-radius: 10px;"
+        "    padding: 10px;"
+        "    font-size: 16px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #c0392b;"  /* Темный красный при наведении */
+        "}"
+        );
+}
 
 
 
 
-// void MainWindow::CreateImportButton() {
-//     importButton = new QPushButton("Загрузить из CSV");
-//     connect(importButton, &QPushButton::clicked, this, &MainWindow::importFromCSV);
-//     importButton->setStyleSheet(
-//         "QPushButton {"
-//         "    background-color: #2ecc71;"  /* Зеленый фон */
-//         "    color: white;"
-//         "    border-radius: 10px;"
-//         "    padding: 10px;"
-//         "    font-size: 16px;"
-//         "}"
-//         "QPushButton:hover {"
-//         "    background-color: #27ae60;"  /* Темный зеленый при наведении */
-//         "}"
-//         );
-// }
+void MainWindow::CreateImportButton() {
+    connect(importButton, &QPushButton::clicked, this, &MainWindow::importFromCSV);
+    importButton->setStyleSheet(
+        "QPushButton {"
+        "    background-color: #2ecc71;"  /* Зеленый фон */
+        "    color: white;"
+        "    border-radius: 10px;"
+        "    padding: 10px;"
+        "    font-size: 16px;"
+        "}"
+        "QPushButton:hover {"
+        "    background-color: #27ae60;"  /* Темный зеленый при наведении */
+        "}"
+        );
+}
 
 
 void MainWindow::CreateSearchLine()
@@ -307,8 +306,6 @@ void MainWindow::updateWeekTable(const QDate &selectedDate)
                 QString evName = fields[2];
                 QString evDesc = fields[3];
                 bool isImportant = (fields.size() >= 5 && fields[4] == "1");
-
-                // Цвет события получаем из базы данных (предполагаем, что это строка HEX или обычный цвет)
                 QString colorStr = fields[5];
                 QColor eventColor;
                 if (colorStr.isEmpty()) {
@@ -535,36 +532,222 @@ void MainWindow::searchByName()
 {
     QString searchText = searchLineEdit->text().trimmed().toLower();
 
-    // Обходим все дни недели
-    for (int i = 0; i < weekLayout->count(); ++i) {
-        QLayoutItem *dayItem = weekLayout->itemAt(i);
-        if (!dayItem || !dayItem->widget()) continue;
+    if (searchText.isEmpty()) {
+        // Если поиск пуст, показываем текущую неделю
+        updateWeekTable(calendarWidget->selectedDate());
+        return;
+    }
 
-        QWidget *dayWidget = dayItem->widget();
-        QVBoxLayout *dayLayout = qobject_cast<QVBoxLayout*>(dayWidget->layout());
-        if (!dayLayout) continue;
+    // Группируем найденные события по датам
+    QMap<QDate, QVector<QStringList>> eventsByDate;
 
-        bool hasVisibleEvents = false;
+    // Фильтруем события из всех данных
+    for (const QString &eventLine : eventsData) {
+        QStringList fields = eventLine.split("|");
+        if (fields.size() < 6) continue;
 
-        // Обходим все события в дне (начиная с индекса 1, пропуская заголовок)
-        for (int j = 1; j < dayLayout->count(); ++j) {
-            QLayoutItem *eventItem = dayLayout->itemAt(j);
-            if (!eventItem || !eventItem->widget()) continue;
+        QString eventName = fields[2].toLower();
+        if (eventName.contains(searchText)) {
+            QDate eventDate = QDate::fromString(fields[1], "yyyy-MM-dd");
+            eventsByDate[eventDate].append(fields);
+        }
+    }
 
-            EventWidget *eventWidget = qobject_cast<EventWidget*>(eventItem->widget());
-            if (!eventWidget) continue;
+    // Очищаем текущее отображение
+    QLayoutItem *child;
+    while ((child = weekLayout->takeAt(0)) != nullptr) {
+        if (child->widget()) child->widget()->deleteLater();
+        delete child;
+    }
 
-            QString eventName = eventWidget->getEventName().toLower();
-            bool match = eventName.contains(searchText);
+    // Сортируем даты
+    QList<QDate> dates = eventsByDate.keys();
+    std::sort(dates.begin(), dates.end());
 
-            // Скрываем или показываем событие
-            eventWidget->setVisible(match || searchText.isEmpty());
-            if (match) hasVisibleEvents = true;
+    QLocale russianLocale(QLocale::Russian, QLocale::Russia);
+
+    // Создаем колонки для каждой даты с найденными событиями
+    for (const QDate &date : dates) {
+        QWidget *dayColumn = new QWidget(this);
+        QVBoxLayout *dayLayout = new QVBoxLayout(dayColumn);
+
+        // Заголовок с датой
+        QLabel *dateLabel = new QLabel(russianLocale.toString(date, "ddd dd MMM"), this);
+        dateLabel->setAlignment(Qt::AlignCenter);
+        dateLabel->setStyleSheet("font-weight: bold; font-size: 14px;");
+        dayLayout->addWidget(dateLabel);
+
+        // Добавляем события
+        for (const QStringList &eventFields : eventsByDate[date]) {
+            QString eventId = eventFields[0];
+            QString name = eventFields[2];
+            QString desc = eventFields[3];
+            bool isImportant = (eventFields[4] == "1");
+            QString colorStr = eventFields[5];
+            QColor eventColor = colorStr.isEmpty() ? QColor(0, 255, 0) : QColor(colorStr);
+
+            EventWidget *eventWidget = new EventWidget(eventId, name, desc, date, eventColor, this);
+            connect(eventWidget, &EventWidget::editRequested, this, &MainWindow::handleEditRequest);
+            dayLayout->addWidget(eventWidget);
         }
 
-        // Скрываем день, если нет событий и есть поисковый запрос
-        dayWidget->setVisible(hasVisibleEvents || searchText.isEmpty());
+        dayLayout->addStretch();
+        weekLayout->addWidget(dayColumn);
     }
 }
 
 
+
+void MainWindow::exportToCSV() {
+    QString fileName = QFileDialog::getSaveFileName(this,
+                                                    "Экспорт в CSV",
+                                                    "",
+                                                    "CSV Files (*.csv)"
+                                                    );
+
+    if (fileName.isEmpty()) return;
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Ошибка", "Не удалось создать файл!");
+        return;
+    }
+
+    QTextStream stream(&file);
+    stream.setEncoding(QStringConverter::Utf8);
+
+    // Заголовки CSV
+    QStringList headers = {
+        "ID", "Дата", "Название",
+        "Описание", "Важность", "Цвет"
+    };
+    stream << headers.join(",") << "\n";
+
+    // Обработка всех событий
+    for (const QString &eventStr : eventsData) {
+        QStringList fields = eventStr.split("|");
+        if (fields.size() < 6) continue; // Пропуск некорректных строк
+
+        // Экранирование полей с кавычками и переносами
+        for (QString &field : fields) {
+            field = "\"" + field.replace("\"", "\"\"") + "\"";
+        }
+
+        // Формирование строки CSV
+        QStringList csvLine = {
+            fields[0], // ID
+            fields[1], // Дата
+            fields[2], // Название
+            fields[3], // Описание
+            fields[4], // Важность
+            fields[5]  // Цвет
+        };
+
+        stream << csvLine.join(",") << "\n";
+    }
+
+    file.close();
+    QMessageBox::information(this,
+                             "Экспорт завершен",
+                             QString("Успешно экспортировано %1 событий").arg(eventsData.size())
+                             );
+}
+
+void MainWindow::importFromCSV() {
+    QString fileName = QFileDialog::getOpenFileName(this,
+                                                    "Импорт из CSV",
+                                                    "",
+                                                    "CSV Files (*.csv);;All Files (*)"
+                                                    );
+
+    if (fileName.isEmpty()) return;
+
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Ошибка", "Не удалось открыть файл.");
+        return;
+    }
+
+    QTextStream stream(&file);
+    stream.setEncoding(QStringConverter::Utf8);
+
+    QStringList csvData;
+    bool isFirstLine = true;
+
+    while (!stream.atEnd()) {
+        QString line = stream.readLine();
+        if (isFirstLine) {
+            isFirstLine = false;
+            continue; // Пропускаем заголовок
+        }
+
+        QStringList fields;
+        QString buffer;
+        bool inQuotes = false;
+
+        // Ручной парсинг CSV с учетом кавычек
+        for (QChar c : line) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                fields << buffer.trimmed();
+                buffer.clear();
+            } else {
+                buffer += c;
+            }
+        }
+        fields << buffer.trimmed(); // Добавляем последнее поле
+
+        if (fields.size() >= 6) {
+            // Форматирование данных для сервера
+            csvData << fields.join("|");
+        }
+    }
+
+    file.close();
+
+    if (csvData.isEmpty()) {
+        QMessageBox::warning(this, "Ошибка", "Файл не содержит данных для импорта.");
+        return;
+    }
+
+    if (socket && socket->state() == QAbstractSocket::ConnectedState) {
+        QString request = QString("%1|IMPORT_CSV|%2").arg(user_id).arg(csvData.join("\n"));
+
+        socket->write(request.toUtf8());
+        socket->flush();
+
+        if (socket->waitForReadyRead(3000)) {
+            QByteArray response = socket->readAll();
+
+            if (response.startsWith("IMPORT_SUCCESS")) {
+                QStringList parts = QString::fromUtf8(response).split('|');
+                QString message = parts.size() > 1
+                                      ? QString("Успешно импортировано %1 событий").arg(parts[1].trimmed())
+                                      : "Импорт завершен успешно";
+
+                QMessageBox::information(this, "Успех", message);
+                loadDates();
+                updateWeekTable(calendarWidget->selectedDate());
+            }
+            else if (response.startsWith("IMPORT_ERROR")) {
+                QString error = response.size() > 12
+                                    ? response.mid(12).trimmed()
+                                    : "Неизвестная ошибка";
+                QMessageBox::critical(this, "Ошибка", error);
+            }
+        }
+        else {
+            QMessageBox::warning(this,
+                                 "Таймаут",
+                                 "Не получен ответ от сервера"
+                                 );
+        }
+    }
+    else {
+        QMessageBox::warning(this,
+                             "Ошибка подключения",
+                             "Нет соединения с сервером"
+                             );
+    }
+}
