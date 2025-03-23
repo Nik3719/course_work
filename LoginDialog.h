@@ -18,7 +18,7 @@ class LoginDialog : public QDialog {
     Q_OBJECT
 public:
     explicit LoginDialog(QWidget *parent = nullptr);
-    ~LoginDialog(); // Деструктор для корректного закрытия сокета
+    ~LoginDialog();
 
 private slots:
     void onLoginClicked();

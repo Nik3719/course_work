@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     socket = new QTcpSocket();
     socket->connectToHost("127.0.0.1", 1244); // IP сервера и порт
-    socket->waitForConnected(3000);
+    socket->waitForConnected();
 
     QFile file("authorization.txt");
     if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text)) {

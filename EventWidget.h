@@ -26,7 +26,7 @@
 class EventWidget : public QFrame {
     Q_OBJECT
 public:
-    // Обновленный конструктор, принимающий QColor
+
     explicit EventWidget(const QString &id, const QString &eventName, const QString &eventDescription,
                          const QDate &eventDate, const QColor &eventColor, QWidget *parent = nullptr);
     QString getEventName() const { return m_eventName; }
@@ -47,9 +47,9 @@ private:
     QString m_id;
     bool m_selected;
     QString m_fullDescription;
-    QDate m_date;
+    QDate date;
     QString m_eventName;
-    QColor m_color;  // Используем QColor для хранения цвета
+    QColor m_color;
     QLabel *nameLabel;
     QLabel *descLabel;
 };

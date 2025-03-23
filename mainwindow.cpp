@@ -66,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent)
     leftLayout->addWidget(logoutButton);
     leftLayout->addStretch();
 
-    // Правая панель: недельный вид без временных столбцов
+    // Правая панель недельный вид
     weekContainer = new QWidget(this);
     weekLayout = new QHBoxLayout(weekContainer);
     weekContainer->setLayout(weekLayout);
@@ -81,13 +81,6 @@ MainWindow::MainWindow(QWidget *parent)
     mainLayout->setStretch(1, 3);
 
     setCentralWidget(centralWidget);
-
-    // Настройка системного трей
-    trayIcon = new QSystemTrayIcon(this);
-    QIcon trayIconPNG(":/Resource/clock-five.png");
-    trayIcon->setIcon(trayIconPNG);
-    trayIcon->show();
-    setWindowIcon(trayIconPNG);
 
     loadDates();
     updateWeekTable(calendarWidget->selectedDate());
@@ -291,7 +284,7 @@ void MainWindow::loadDates()
         }
 
         QString data = QString::fromUtf8(socket->readAll());
-        if (data!="NO_DATA") eventsData = data.split("\n", Qt::SkipEmptyParts);
+        if (data!="NO_DATA") eventsData = data.split(";", Qt::SkipEmptyParts);
         else
         {
             eventsData.clear();
@@ -389,14 +382,13 @@ void MainWindow::showAddDateDialog()
 
     // Добавляем выбор цвета через QComboBox
     QComboBox *colorComboBox = new QComboBox(&dialog);
-    colorComboBox->addItem("Серый", "#808080");  // Red
-    colorComboBox->addItem("Оранжевый", "#FF7F00");  // Orange
-    colorComboBox->addItem("Желтый", "#FFFF00");  // Yellow
-    colorComboBox->addItem("Зеленый", "#00FF00");  // Green
-    colorComboBox->addItem("Голубой", "#0000FF");  // Blue
-    colorComboBox->addItem("Индиго", "#4B0082");  // Indigo
-    colorComboBox->addItem("Фиолетовый", "#8B00FF");  // Violet
-
+    colorComboBox->addItem("Серый", "#808080");
+    colorComboBox->addItem("Оранжевый", "#FF7F00");
+    colorComboBox->addItem("Желтый", "#FFFF00");
+    colorComboBox->addItem("Зеленый", "#00FF00");
+    colorComboBox->addItem("Голубой", "#0000FF");
+    colorComboBox->addItem("Индиго", "#4B0082");
+    colorComboBox->addItem("Фиолетовый", "#8B00FF");
 
     form.addRow("Дата:", dateEdit);
     form.addRow("Название:", nameEdit);
@@ -417,6 +409,12 @@ void MainWindow::showAddDateDialog()
 
         if (name.isEmpty() || description.isEmpty()) {
             QMessageBox::warning(&dialog, "Некорректные данные", "Пожалуйста, заполните все поля.");
+            return;
+        }
+
+        // Проверка на наличие символа ';'
+        if (name.contains(";") || description.contains(";")) {
+            QMessageBox::warning(&dialog, "Некорректные данные", "Поля не должны содержать символ ';'.");
             return;
         }
 
@@ -456,6 +454,7 @@ void MainWindow::showAddDateDialog()
 
     dialog.exec();
 }
+
 
 
 void MainWindow::deleteDate()

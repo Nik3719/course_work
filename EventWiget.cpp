@@ -2,7 +2,7 @@
 
 EventWidget::EventWidget(const QString &id, const QString &eventName, const QString &eventDescription,
                          const QDate &eventDate, const QColor &eventColor, QWidget *parent)
-    : QFrame(parent), m_id(id), m_selected(false), m_fullDescription(eventDescription), m_date(eventDate),
+    : QFrame(parent), m_id(id), m_selected(false), m_fullDescription(eventDescription), date(eventDate),
     m_eventName(eventName), m_color(eventColor)
 {
     // Устанавливаем стиль фона с использованием QColor
@@ -19,7 +19,7 @@ EventWidget::EventWidget(const QString &id, const QString &eventName, const QStr
     if (truncatedName.length() > 10)
         truncatedName = truncatedName.left(10) + "...";
     nameLabel->setText(truncatedName);
-    nameLabel->setToolTip(eventName);  // Устанавливаем тултип для полного имени
+    nameLabel->setToolTip(eventName);
     QFont boldFont = nameLabel->font();
     boldFont.setBold(true);
     nameLabel->setFont(boldFont);
@@ -29,7 +29,7 @@ EventWidget::EventWidget(const QString &id, const QString &eventName, const QStr
     if (truncatedDesc.length() > 10)
         truncatedDesc = truncatedDesc.left(10) + "...";
     descLabel->setText(truncatedDesc);
-    descLabel->setToolTip(eventDescription);  // Устанавливаем тултип для полного описания
+    descLabel->setToolTip(eventDescription);
 
     layout->addWidget(nameLabel);
     layout->addWidget(descLabel);
@@ -93,7 +93,7 @@ void EventWidget::contextMenuEvent(QContextMenuEvent *event) {
         QVBoxLayout *layout = new QVBoxLayout(&dialog);
         QLabel *nameLbl = new QLabel(m_eventName, &dialog);
         QLabel *descLbl = new QLabel(m_fullDescription, &dialog);
-        QLabel *dateLbl = new QLabel(m_date.toString("yyyy-MM-dd"), &dialog);
+        QLabel *dateLbl = new QLabel(date.toString("yyyy-MM-dd"), &dialog);
         descLbl->setWordWrap(true);
         layout->addWidget(new QLabel("Название:", &dialog));
         layout->addWidget(nameLbl);
@@ -109,7 +109,7 @@ void EventWidget::contextMenuEvent(QContextMenuEvent *event) {
         dialog.setWindowTitle("Редактировать событие");
         QFormLayout form(&dialog);
 
-        QDateEdit *dateEdit = new QDateEdit(m_date, &dialog);
+        QDateEdit *dateEdit = new QDateEdit(date, &dialog);
         dateEdit->setCalendarPopup(true);
         QLineEdit *nameEdit = new QLineEdit(m_eventName, &dialog);
         QTextEdit *descriptionEdit = new QTextEdit(m_fullDescription, &dialog);

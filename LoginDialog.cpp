@@ -2,7 +2,6 @@
 #include"network.h"
 
 
-// Пример функции хэширования с использованием QCryptographicHash
 QString hashFunction(const QString &password) {
     QByteArray hash = QCryptographicHash::hash(password.toUtf8(), QCryptographicHash::Md5);
     return hash.toHex();
@@ -80,7 +79,6 @@ void LoginDialog::CreateLoginButton(){
 }
 
 LoginDialog::~LoginDialog() {
-    // Если сокет еще открыт, закрываем его
     if (socket->isOpen())
         socket->close();
 }

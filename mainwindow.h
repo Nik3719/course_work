@@ -27,8 +27,8 @@ private:
     QTableWidget *weekTable;
     QPushButton *addButton;
     QPushButton *deleteButton;
-    QPushButton *exportButton;  // Пока только кнопка
-    QPushButton *importButton;  // Пока только кнопка
+    QPushButton *exportButton;
+    QPushButton *importButton;
     QPushButton *logoutButton;
 
     // Сетевые элементы
