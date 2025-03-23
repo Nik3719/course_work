@@ -2,10 +2,10 @@
 #include"network.h"
 
 
-QString hashFunction(const QString &password) {
-    QByteArray hash = QCryptographicHash::hash(password.toUtf8(), QCryptographicHash::Md5);
-    return hash.toHex();
-}
+// QString hashFunction(const QString &password) {
+//     QByteArray hash = QCryptographicHash::hash(password.toUtf8(), QCryptographicHash::Md5);
+//     return hash.toHex();
+// }
 
 LoginDialog::LoginDialog(QWidget *parent) : QDialog(parent) {
     this->resize(300, 200);
@@ -13,6 +13,9 @@ LoginDialog::LoginDialog(QWidget *parent) : QDialog(parent) {
 
     QLabel *usernameLabel = new QLabel("Имя пользователя:");
     QLabel *passwordLabel = new QLabel("Пароль:");
+
+    unlockTimer = new QTimer(this);
+    connect(unlockTimer, &QTimer::timeout, this, &LoginDialog::unlockButtons);
 
     usernameEdit = new QLineEdit;
     passwordEdit = new QLineEdit;
@@ -32,6 +35,19 @@ LoginDialog::LoginDialog(QWidget *parent) : QDialog(parent) {
     buttonLayout->addWidget(registerButton);
 
     mainLayout->addLayout(buttonLayout);
+
+    countdownTimer = new QTimer(this);
+    connect(countdownTimer, &QTimer::timeout, this, &LoginDialog::updateCountdown);
+
+    // Создаем лейбл для отображения времени
+    timerLabel = new QLabel(this);
+    timerLabel->setAlignment(Qt::AlignCenter);
+    timerLabel->setStyleSheet("color: red;");
+    timerLabel->hide();  // Скрываем по умолчанию
+
+    // Добавляем в макет
+    mainLayout->addWidget(timerLabel);
+
     setLayout(mainLayout);
 }
 
@@ -84,6 +100,13 @@ LoginDialog::~LoginDialog() {
 }
 
 void LoginDialog::onLoginClicked() {
+
+    if (!loginButton->isEnabled()) {
+        QMessageBox::warning(this, "Блокировка",
+                             QString("Повторите через %1 сек.").arg(remainingTime));
+        return;
+    }
+
     QString username = usernameEdit->text();
     QString password = passwordEdit->text();
 
@@ -106,6 +129,7 @@ void LoginDialog::onLoginClicked() {
     QStringList parts = QString::fromUtf8(serverResponse).split('|');
 
     if (parts[0] == "OK") {
+        failedAttempts = 0;
         qDebug() << "serverResponse " <<serverResponse << " " << parts[0] << " " << parts[1];
 
         if (parts.size() >= 2) {
@@ -127,8 +151,33 @@ void LoginDialog::onLoginClicked() {
             return;
         }
     }
+    else
+    {
+        failedAttempts++; // Увеличиваем счетчик ошибок
+        if (failedAttempts >= 3) {
 
-    QMessageBox::warning(this, "Ошибка", "Неверное имя пользователя или пароль");
+        loginButton->setEnabled(false);
+        registerButton->setEnabled(false);
+
+        // Настраиваем таймеры
+        remainingTime = 30;
+        timerLabel->show();
+        updateCountdownDisplay();
+
+        unlockTimer->start(30000);    // Основной таймер блокировки
+        countdownTimer->start(1000); // Таймер обновления отображения
+        QMessageBox::warning(this, "Блокировка",
+                             "Слишком много попыток. Повторите через 30 сек.");
+        } else
+        {
+            QMessageBox::warning(this, "Ошибка", "Неверное имя пользователя или пароль");
+        }
+
+
+    }
+
+
+    //QMessageBox::warning(this, "Ошибка", "Неверное имя пользователя или пароль");
 }
 
 
@@ -179,5 +228,30 @@ void LoginDialog::onRegisterClicked() {
 
     // Обработка ошибки регистрации
     QMessageBox::warning(this, "Ошибка", "Не удалось зарегистрироваться. Возможно, пользователь уже существует.");
+}
+
+void LoginDialog::unlockButtons() {
+    loginButton->setEnabled(true);
+    registerButton->setEnabled(true);
+    failedAttempts = 0; // Сбрасываем счетчик
+    unlockTimer->stop();
+    timerLabel->hide();
+    countdownTimer->stop();
+}
+
+// Новый слот для обновления отсчета
+void LoginDialog::updateCountdown() {
+    remainingTime--;
+    updateCountdownDisplay();
+
+    if(remainingTime <= 0) {
+        countdownTimer->stop();
+        unlockButtons();
+    }
+}
+
+// Обновление отображения времени
+void LoginDialog::updateCountdownDisplay() {
+    timerLabel->setText(QString("До разблокировки: %1 сек.").arg(remainingTime));
 }
 
